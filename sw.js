@@ -1,7 +1,7 @@
 /*!
  * Crawford Coaching Interval Timer – Service Worker
  * © 2026 Scott Crawford – Crawford Coaching
- * https://crawfordcoaching.com
+ * https://crawfordcoaching.ca
  */
 const CACHE_NAME = 'interval-timer-v1';
 const ASSETS = [

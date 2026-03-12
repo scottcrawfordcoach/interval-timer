@@ -30,12 +30,21 @@
       color: var(--fg);
       background: var(--bg);
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto auto auto 1fr auto;
       overflow-x: hidden;
     }
     header, footer { padding: 16px clamp(12px, 3vw, 28px); }
     header { border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0)); }
     footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+
+    /* ====== Site nav bar ====== */
+    .site-nav { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px clamp(12px, 3vw, 28px); background:#080d1a; border-bottom:1px solid var(--border); font-size:13px; }
+    .site-nav .site-brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--fg); font-weight:700; font-size:14px; letter-spacing:0.3px; }
+    .site-nav .site-brand img { height:28px; width:28px; border-radius:6px; }
+    .site-nav .site-links { display:flex; align-items:center; gap:16px; }
+    .site-nav .site-links a { color:var(--muted); text-decoration:none; font-size:13px; transition:color .15s; white-space:nowrap; }
+    .site-nav .site-links a:hover { color:var(--fg); }
+    .site-nav .site-links a svg { vertical-align:-2px; margin-right:4px; }
 
     h1 { font-size: clamp(18px, 3vw, 28px); margin: 0; letter-spacing: 0.3px; }
 
@@ -123,6 +132,9 @@
       .card { padding: 14px; }
       h1 { font-size: 18px; }
       .timer { padding: 20px 16px; min-height: 200px; }
+      .site-nav { padding:8px 14px; }
+      .site-nav .site-brand { font-size:13px; }
+      .site-nav .site-brand img { height:24px; width:24px; }
     }
     @media (pointer: coarse) {
       input[type="number"],
@@ -142,6 +154,20 @@
   </style>
 </head>
 <body>
+  <!-- Site navigation bar -->
+  <nav class="site-nav">
+    <a href="https://crawford-coaching.ca" class="site-brand" target="_blank" rel="noopener">
+      <img src="favicon.png" alt="Crawford Coaching" />
+      Crawford Coaching
+    </a>
+    <div class="site-links">
+      <a href="https://crawford-coaching.ca" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Back to Site
+      </a>
+    </div>
+  </nav>
+
   <!-- Install Banner (slim top bar) -->
   <div class="install-banner" id="installBanner">
     <div class="install-text" id="installText"><strong>Install this timer on your device</strong> for quick, full-screen access.</div>
@@ -295,14 +321,14 @@
   </main>
 
   <footer>
-    <a href="https://crawfordcoaching.com" target="_blank" rel="noopener" style="color:var(--muted); text-decoration:none;">Crawford Coaching</a> Interval Timer &mdash; &copy; 2026 Scott Crawford
+    <a href="https://crawford-coaching.ca" target="_blank" rel="noopener" style="color:var(--muted); text-decoration:none;">Crawford Coaching</a> Interval Timer &mdash; &copy; 2026 Scott Crawford
   </footer>
 
   <script>
     /*!
      * Crawford Coaching Interval Timer
      * © 2026 Scott Crawford – Crawford Coaching
-     * https://crawfordcoaching.com
+     * https://crawford-coaching.ca
      *
      * Built by Scott Crawford. Free to use.
      * Attribution appreciated but not required.

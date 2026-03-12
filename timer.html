@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <title>Crawford Coaching Interval Timer</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --fg: #e7ecf3;
+      --muted: #b9c2cc;
+      --accent: #66a3ff;
+      --danger: #ff6b6b;
+      --card: #151b2f;
+      --border: #2a3350;
+      --timer-size: clamp(72px, 18vw, 180px);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--fg);
+      background: var(--bg);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow-x: hidden;
+    }
+    header, footer { padding: 16px clamp(12px, 3vw, 28px); }
+    header { border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0)); }
+    footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+
+    h1 { font-size: clamp(18px, 3vw, 28px); margin: 0; letter-spacing: 0.3px; }
+
+  .container { display: grid; gap: 20px; grid-template-columns: 1fr; padding: 16px clamp(12px, 3vw, 28px); }
+  /* Timer below controls layout (always single column now) */
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+    .stack { display: grid; gap: 12px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+    input[type="number"], input[type="text"], select { background: #0e1426; border: 1px solid var(--border); color: var(--fg); border-radius: 10px; padding: 10px 12px; font-size: 14px; min-width: 0; }
+  select option { background:#0e1426; }
+    input[type="text"].mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; letter-spacing: 0.5px; }
+    .help { font-size: 12px; color: var(--muted); }
+
+    .btn { border: 1px solid var(--border); background: #101734; color: var(--fg); padding: 10px 14px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: transform .05s ease, opacity .2s ease, background .2s ease; user-select: none; }
+    .btn:hover { background: #121b3b; }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { background: var(--accent); color: #0b1020; border-color: transparent; }
+    .btn.primary:hover { filter: brightness(1.05); }
+    .btn.ghost { background: transparent; }
+    .btn.danger { background: var(--danger); border-color: transparent; color: white; }
+
+    .timer { position: relative; display: grid; place-items: center; height: 100%; min-height: 240px; text-align: center; background: radial-gradient(1200px 800px at 50% -10%, rgba(255,255,255,.06), transparent); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+    .timer .label { color: var(--muted); font-size: calc(var(--timer-size) * 0.3); letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.05; }
+    .timer .label .meta { display:block; margin-top: 6px; }
+    .timer .time { font-size: var(--timer-size); font-weight: 900; line-height: 1; margin: 16px 0; font-variant-numeric: tabular-nums; }
+    /* Bottom info same size as top label */
+    .timer .sub { color: var(--muted); font-size: calc(var(--timer-size) * 0.3); text-transform: uppercase; letter-spacing: 1.5px; }
+
+  body:not(.colour-by-interval) #intervalMeta select[data-interval-color] { display:none; }
+  body:not(.colour-by-interval) #intervalMeta .help-interval-note { display:none; }
+  .segmented { display:inline-grid; grid-auto-flow:column; background:#10172b; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .segmented button { background:transparent; border:0; color:var(--muted); padding:6px 16px; font-size:12px; cursor:pointer; font-weight:600; line-height:1.2; min-width:72px; }
+  .segmented button + button { border-left:1px solid var(--border); }
+  .segmented button.active { background:var(--accent); color:#0b1020; box-shadow:0 0 0 1px var(--accent) inset; }
+  .segmented button:not(.active):hover { background:#16213a; color:var(--fg); }
+  .segmented button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+  body.colour-by-interval #setPalettes select[data-set-color] { display:none; }
+  body:not(.colour-by-interval) #intervalMeta select[data-interval-color] { display:none; }
+
+    .grid { display: grid; gap: 10px; }
+    .grid.cols-2 { grid-template-columns: 1fr 1fr; }
+
+    .list { display: grid; gap: 8px; }
+    .list .item { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+
+    .sep { height: 1px; background: var(--border); margin: 4px 0 8px; }
+
+    .pill { padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: #0f162f; font-size: 12px; color: var(--muted); }
+
+    /* Swatch palette */
+    .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .swatch { border: 1px solid var(--border); height: 28px; border-radius: 10px; cursor: pointer; position: relative; outline: none; display: inline-block; }
+    .swatch[aria-checked="true"]::after { content: "✔"; position: absolute; right: 6px; top: 3px; font-size: 14px; color: rgba(255,255,255,.95); text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+
+    /* Validation */
+    .invalid { border-color: var(--danger) !important; box-shadow: 0 0 0 2px rgba(255,107,107,.15); }
+    #summary { color: var(--muted); font-size: 12px; }
+
+    /* Compact (Hide Controls) mode */
+  .compact #controls { display: none; }
+    .hud { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
+    .compact .hud { display: flex; }
+
+    /* ====== Install banner ====== */
+    .install-banner { display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.75); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); place-items:center; }
+    .install-banner.visible { display:grid; }
+    .install-banner .install-card { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:28px 24px; max-width:380px; width:calc(100% - 32px); text-align:center; }
+    .install-banner .install-card h2 { margin:0 0 8px; font-size:20px; }
+    .install-banner .install-card p { color:var(--muted); font-size:14px; line-height:1.5; margin:0 0 16px; }
+    .install-banner .install-card .install-steps { text-align:left; color:var(--muted); font-size:13px; line-height:1.6; margin:0 0 20px; padding-left:20px; }
+    .install-banner .install-card .install-steps li { margin-bottom:4px; }
+    .install-banner .btn-row { display:flex; gap:10px; justify-content:center; }
+
+    /* ====== Mobile & touch optimisation ====== */
+    @media screen and (max-width: 768px) {
+      input[type="number"],
+      input[type="text"],
+      select { font-size: 16px; }
+    }
+    @media (max-width: 540px) {
+      :root { --timer-size: clamp(52px, 16vw, 140px); }
+      .grid.cols-2 { grid-template-columns: 1fr; }
+      .container { padding: 12px; gap: 14px; }
+      header, footer { padding: 12px 14px; }
+      .card { padding: 14px; }
+      h1 { font-size: 18px; }
+      .timer { padding: 20px 16px; min-height: 200px; }
+    }
+    @media (pointer: coarse) {
+      input[type="number"],
+      input[type="text"],
+      select { min-height: 44px; }
+      .btn { min-height: 44px; }
+      .segmented button { min-height: 42px; padding: 8px 14px; }
+      .swatch { min-height: 36px; min-width: 36px; }
+    }
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      #bottomControls { padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important; }
+      footer { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+    }
+    @media (max-width: 400px) {
+      #bottomControls .btn { flex: 1 1 calc(50% - 6px); text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <header style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+    <h1><span style="opacity:.5; font-weight:400">Crawford Coaching</span> Interval Timer</h1>
+    <div class="row" style="gap:6px">
+      <select id="quickFavSelect" style="max-width:160px; display:none">
+        <option value="">Load Saved…</option>
+      </select>
+      <button class="btn ghost" id="headerSaveFavBtn" title="Save current setup to favourites">★ Save</button>
+      <button class="btn" id="toggleOptionsBtn">Hide Controls</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Controls -->
+    <section class="card stack" id="controls">
+      <div class="row" style="flex-wrap:wrap">
+        <label style="flex:1 1 220px">
+          Workout name
+          <input id="workoutName" type="text" placeholder="Workout" value="" />
+        </label>
+        <label style="flex:1">
+          Mode
+          <select id="mode">
+            <option value="same">All intervals same length</option>
+            <option value="individual">Individual interval lengths</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="row">
+        <div class="stack" style="flex:1">
+          <label>
+            Number of sets
+            <input id="numSets" type="number" min="1" value="3" />
+          </label>
+          <div class="help">Set colours & names below</div>
+        </div>
+        <div class="stack" style="flex:1">
+          <label>
+            Intervals per set
+            <input id="intervalsPerSet" type="number" min="1" value="5" />
+          </label>
+          <div class="stack" style="gap:6px">
+            <div class="help" style="font-size:12px;">Select colour by</div>
+            <div id="colourModeSwitch" class="segmented">
+              <button type="button" data-mode="set" class="active">Set</button>
+              <button type="button" data-mode="interval">Interval</button>
+            </div>
+            <div class="help">In Set mode, timer uses set colours only</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="sameBlock" class="grid cols-2">
+        <label>
+          Interval length (mm:ss)
+          <input id="sameLen" class="mono" type="text" placeholder="02:00" value=":30" />
+          <span class="help">Type times directly (e.g., <b>1:15</b>, <b>:45</b>, or <b>90</b>)</span>
+        </label>
+        <label>
+          Break between intervals (mm:ss)
+          <input id="breakLen" class="mono" type="text" placeholder="00:10" value=":15" />
+        </label>
+      </div>
+
+      <div id="individualBlock" class="stack" style="display:none">
+        <div class="row" style="justify-content:space-between; align-items:end">
+          <label style="flex:1">
+            Break between intervals (mm:ss)
+            <input id="breakLen2" class="mono" type="text" placeholder="00:10" value=":15" />
+          </label>
+          <button class="btn" id="regenIntervals" title="Regenerate list to match 'Intervals per set'">Regenerate list</button>
+        </div>
+        <div class="list" id="intervalList"></div>
+      </div>
+
+      <div class="grid cols-2">
+        <label>
+          Break between sets (mm:ss)
+          <input id="setBreakLen" class="mono" type="text" placeholder="00:30" value=":30" />
+        </label>
+        <label>
+          Break colour (applies to all breaks)
+          <select id="breakColorSelect"></select>
+        </label>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="row" style="align-items:stretch; gap:28px; flex-wrap:wrap">
+        <div class="stack" style="flex:1 1 320px; min-width:280px">
+          <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+            <div class="pill">Set colours & labels</div>
+            <button class="btn ghost" id="autoColors">Auto-fill</button>
+          </div>
+          <div id="setPalettes" class="stack"></div>
+        </div>
+        <div class="stack" id="intervalMetaBlock" style="flex:1 1 320px; min-width:280px">
+          <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+            <div class="pill">Interval colours & labels</div>
+            <div class="help" style="flex:1">Colours apply by interval index across all sets</div>
+          </div>
+          <div id="intervalMeta" class="stack"></div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+
+      <div id="summary" aria-live="polite"></div>
+      <div class="sep"></div>
+      <div class="stack" id="favouritesSection">
+        <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+          <div class="pill">Favourites</div>
+          <div class="row" style="gap:6px; flex-wrap:wrap">
+            <button class="btn" id="saveFavBtn" type="button">Save</button>
+            <button class="btn" id="exportFavsBtn" type="button" title="Download all favourites as JSON">Export</button>
+            <button class="btn" id="importFavsBtn" type="button" title="Import favourites from JSON">Import</button>
+            <input type="file" id="importFavsFile" accept="application/json" style="display:none" />
+          </div>
+        </div>
+        <div id="favouritesList" class="stack" style="font-size:12px; color:var(--muted)"></div>
+        <div class="help">Stored locally in your browser. Use Export to download a backup JSON, Import to restore/merge.</div>
+      </div>
+    </section>
+
+    <!-- Timer Display -->
+    <section class="timer" id="display">
+      <div class="label" id="phase">Ready <span class="meta">—</span></div>
+      <div class="time" id="time">00:00</div>
+      <div class="sub" id="sub">—</div>
+
+    </section>
+
+    <!-- Bottom Controls -->
+    <section class="card" id="bottomControls" style="margin-top:auto; padding:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; position:sticky; bottom:0; z-index:10; border-bottom-left-radius:0; border-bottom-right-radius:0; border-left:0; border-right:0; border-bottom:0;">
+      <button class="btn primary" id="startBtn" style="min-width:80px; font-size:16px; padding:12px 24px;">Start</button>
+      <button class="btn" id="pauseBtn" disabled style="min-width:80px; font-size:16px; padding:12px 24px;">Pause</button>
+      <button class="btn" id="resumeBtn" disabled style="min-width:80px; font-size:16px; padding:12px 24px;">Resume</button>
+      <button class="btn danger" id="resetBtn" disabled style="min-width:80px; font-size:16px; padding:12px 24px;">Reset</button>
+      <span class="help" id="status"></span>
+    </section>
+  </main>
+
+  <!-- Install Banner (shown via ?install=1) -->
+  <div class="install-banner" id="installBanner">
+    <div class="install-card">
+      <h2>Install Interval Timer</h2>
+      <p>Add this app to your home screen for quick, full-screen access — no app store needed.</p>
+      <div id="installNative" style="display:none">
+        <button class="btn primary" id="installNativeBtn" style="font-size:16px; padding:12px 28px; width:100%;">Install Now</button>
+        <div style="height:12px"></div>
+      </div>
+      <div id="installManual">
+        <ol class="install-steps" id="installSteps"></ol>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="installDismiss" style="padding:10px 24px;">Continue to Timer</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://crawfordcoaching.com" target="_blank" rel="noopener" style="color:var(--muted); text-decoration:none;">Crawford Coaching</a> Interval Timer &mdash; &copy; 2026 Scott Crawford
+  </footer>
+
+  <script>
+    /*!
+     * Crawford Coaching Interval Timer
+     * © 2026 Scott Crawford – Crawford Coaching
+     * https://crawfordcoaching.com
+     *
+     * Built by Scott Crawford. Free to use.
+     * Attribution appreciated but not required.
+     */
+
+    // ---------- Service Worker ----------
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // ---------- PWA Install ----------
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      // If install banner is showing, enable native button
+      const nativeBlock = document.getElementById('installNative');
+      if (nativeBlock) nativeBlock.style.display = 'block';
+    });
+
+    (function initInstallBanner() {
+      if (!new URLSearchParams(window.location.search).has('install')) return;
+      // Already installed as standalone? Skip banner.
+      if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) return;
+
+      const banner = document.getElementById('installBanner');
+      const stepsEl = document.getElementById('installSteps');
+      const nativeBlock = document.getElementById('installNative');
+      const nativeBtn = document.getElementById('installNativeBtn');
+      const dismissBtn = document.getElementById('installDismiss');
+      if (!banner) return;
+
+      // Platform-specific instructions
+      const ua = navigator.userAgent;
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/.test(ua);
+      let steps = [];
+      if (isIOS) {
+        steps = [
+          'Tap the <b>Share</b> button (box with arrow) in Safari',
+          'Scroll down and tap <b>"Add to Home Screen"</b>',
+          'Tap <b>Add</b> to confirm'
+        ];
+      } else if (isAndroid) {
+        steps = [
+          'Tap the <b>\u22ee menu</b> (three dots) in your browser',
+          'Tap <b>"Install app"</b> or <b>"Add to Home Screen"</b>',
+          'Tap <b>Install</b> to confirm'
+        ];
+      } else {
+        steps = [
+          'Look for the <b>install icon</b> (\u229e) in the address bar',
+          'Or open the browser menu and choose <b>"Install Interval Timer"</b>',
+          'Click <b>Install</b> to confirm'
+        ];
+      }
+      stepsEl.innerHTML = steps.map(s => `<li>${s}</li>`).join('');
+
+      // If beforeinstallprompt already fired, show native button
+      if (deferredInstallPrompt && nativeBlock) nativeBlock.style.display = 'block';
+
+      if (nativeBtn) {
+        nativeBtn.addEventListener('click', async () => {
+          if (!deferredInstallPrompt) return;
+          deferredInstallPrompt.prompt();
+          const result = await deferredInstallPrompt.userChoice;
+          if (result.outcome === 'accepted') banner.classList.remove('visible');
+          deferredInstallPrompt = null;
+        });
+      }
+
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          banner.classList.remove('visible');
+          // Clean up URL
+          const url = new URL(window.location); url.searchParams.delete('install');
+          history.replaceState(null, '', url);
+        });
+      }
+
+      banner.classList.add('visible');
+    })();
+
+    // ---------- Utilities ----------
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    function toSeconds(str) {
+      str = (str || '').trim();
+      if (!str) return 0;
+      if (str.includes(':')) {
+        const [m, s] = str.split(':');
+        const mm = parseInt(m || '0', 10);
+        const ss = parseInt(s || '0', 10);
+        return Math.max(0, (isNaN(mm)?0:mm) * 60 + (isNaN(ss)?0:ss));
+      }
+      const n = parseInt(str, 10);
+      return Math.max(0, isNaN(n) ? 0 : n);
+    }
+
+    function fmt(seconds) {
+      const sec = Math.max(0, Math.ceil(seconds));
+      if (sec >= 60) { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${String(s).padStart(2, '0')}`; }
+      return String(sec).padStart(2, '0');
+    }
+
+    function fmtTotal(total) {
+      const sec = Math.max(0, Math.round(total));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    function setBg(color) {
+      const bg = color || getComputedStyle(document.documentElement).getPropertyValue('--bg');
+      document.body.style.background = bg;
+      const lum = luminance(bg);
+      document.documentElement.style.setProperty('--fg', lum > 0.5 ? '#000000' : '#e7ecf3');
+      document.documentElement.style.setProperty('--muted', lum > 0.5 ? '#4b5563' : '#b9c2cc');
+    }
+
+    // ---------- Audio (beep) ----------
+    let audioCtx;
+    function beep(duration = 140, freq = 880, type = 'sine', vol = 0.06) {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type; o.frequency.value = freq;
+        g.gain.value = vol;
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start();
+        setTimeout(() => { o.stop(); }, duration);
+      } catch (e) { /* ignore */ }
+    }
+
+    // ---------- Palette ----------
+    const PALETTE = ['#3b82f6','#22c55e','#f43f5e','#a855f7','#eab308','#06b6d4','#ef4444','#f97316','#10b981','#64748b'];
+
+    function makeSwatch(color, group, selected, onChoose) {
+      const btn = document.createElement('button');
+      btn.className = 'swatch';
+      btn.style.background = color;
+      btn.setAttribute('role','radio');
+      btn.setAttribute('aria-checked', selected ? 'true' : 'false');
+      btn.title = color;
+      btn.addEventListener('click', () => {
+        $$(`[data-group="${group}"]`).forEach(el => el.setAttribute('aria-checked','false'));
+        btn.setAttribute('aria-checked','true');
+        onChoose(color);
+      });
+      btn.dataset.group = group;
+      return btn;
+    }
+
+    function renderPalette(container, group, current, onChoose) {
+      container.innerHTML = '';
+      PALETTE.forEach(col => container.appendChild(makeSwatch(col, group, col === current, onChoose)));
+    }
+
+    // ---------- Colour select helpers (dropdown approach) ----------
+    const breakColorSelect = $('#breakColorSelect');
+    const breakHex = $('#breakHex');
+    function luminance(hex) {
+      if (!/^#?[0-9a-fA-F]{6}$/.test(hex)) return 0.5;
+      const h = hex.replace('#','');
+      const r=parseInt(h.slice(0,2),16), g=parseInt(h.slice(2,4),16), b=parseInt(h.slice(4,6),16);
+      return (0.299*r+0.587*g+0.114*b)/255;
+    }
+    function styleColorSelect(sel) {
+      if (!sel) return;
+      const val = sel.value || '#000000';
+      sel.style.background = `linear-gradient(90deg, ${val} 0 26px, #0e1426 26px 26px)`;
+      sel.style.backgroundRepeat = 'no-repeat';
+      sel.style.paddingLeft = '34px';
+      sel.style.color = '#fff';
+      sel.style.borderColor = val;
+    }
+    const COLOR_NAMES = ['Blue','Green','Rose','Purple','Amber','Cyan','Red','Orange','Emerald','Slate'];
+    function populateColorSelect(sel, current) {
+      sel.innerHTML='';
+      PALETTE.forEach((col, idx) => {
+        const opt=document.createElement('option');
+        opt.value=col; opt.textContent=COLOR_NAMES[idx] || '';
+        opt.style.background = col;
+        opt.style.color = luminance(col) > 0.6 ? '#0b1020' : '#ffffff';
+        opt.style.fontWeight = '500';
+        opt.dataset.color = col;
+        if (col===current) opt.selected=true;
+        sel.appendChild(opt);
+      });
+      styleColorSelect(sel);
+    }
+    function buildBreakColorSelect() {
+      if (!breakColorSelect) return;
+      populateColorSelect(breakColorSelect, breakColor);
+  if (breakHex) breakHex.textContent = '';
+      styleColorSelect(breakColorSelect);
+    }
+    if (breakColorSelect) breakColorSelect.addEventListener('change', () => {
+      breakColor = breakColorSelect.value;
+      styleColorSelect(breakColorSelect);
+  if (breakHex) breakHex.textContent = '';
+    });
+
+    // ---------- DOM Elements ----------
+    const mode = $('#mode');
+    const numSets = $('#numSets');
+    const intervalsPerSet = $('#intervalsPerSet');
+  const workoutName = $('#workoutName');
+  const colourModeSwitch = $('#colourModeSwitch');
+  function currentColourModeInterval() { return document.body.classList.contains('colour-by-interval'); }
+    const sameBlock = $('#sameBlock');
+    const individualBlock = $('#individualBlock');
+    const sameLen = $('#sameLen');
+    const breakLen = $('#breakLen');
+    const breakLen2 = $('#breakLen2');
+    const setBreakLen = $('#setBreakLen');
+    const intervalList = $('#intervalList');
+  const setPalettes = $('#setPalettes');
+    const startBtn = $('#startBtn');
+    const pauseBtn = $('#pauseBtn');
+    const resumeBtn = $('#resumeBtn');
+    const resetBtn = $('#resetBtn');
+    const toggleOptionsBtn = $('#toggleOptionsBtn');
+    const headerSaveFavBtn = $('#headerSaveFavBtn');
+    const quickFavSelect = $('#quickFavSelect');
+    const controlsPanel = $('#controls');
+    const statusEl = $('#status');
+    const summaryEl = $('#summary');
+  const saveFavBtn = $('#saveFavBtn');
+  const favouritesList = $('#favouritesList');
+  const exportFavsBtn = $('#exportFavsBtn');
+  const importFavsBtn = $('#importFavsBtn');
+  const importFavsFile = $('#importFavsFile');
+
+    const phaseEl = $('#phase');
+    const timeEl = $('#time');
+    const subEl = $('#sub');
+
+
+
+    // State for colours
+  let setColors = [];
+  let intervalColors = [];
+  let breakColor = '#ef4444';
+
+    // ---------- Mode switching ----------
+    function refreshMode() {
+      const m = mode.value;
+      sameBlock.style.display = m === 'same' ? '' : 'none';
+      individualBlock.style.display = m === 'individual' ? '' : 'none';
+      summarize();
+    }
+    mode.addEventListener('change', refreshMode);
+
+    // ---------- Interval list (individual mode) ----------
+    function buildIntervalInputs() {
+      const n = Number(intervalsPerSet.value || 0);
+      intervalList.innerHTML = '';
+      for (let i = 1; i <= n; i++) {
+        const row = document.createElement('div');
+        row.className = 'item';
+        const lbl = document.createElement('div');
+        lbl.textContent = `Interval ${i}`;
+        lbl.style.color = 'var(--muted)';
+        const input = document.createElement('input');
+        input.type = 'text'; input.placeholder = i % 2 ? ':30' : '1:00';
+        input.className = 'mono'; input.value = i % 2 ? ':30' : '1:00';
+        input.dataset.idx = String(i-1);
+        const help = document.createElement('div'); help.className = 'help'; help.textContent = 'mm:ss or seconds';
+        input.addEventListener('input', summarize);
+        row.appendChild(lbl); row.appendChild(input); row.appendChild(help);
+        intervalList.appendChild(row);
+      }
+    }
+
+    $('#regenIntervals').addEventListener('click', () => { buildIntervalInputs(); buildIntervalMeta(); summarize(); });
+    intervalsPerSet.addEventListener('change', () => { buildIntervalInputs(); buildIntervalMeta(); summarize(); });
+  numSets.addEventListener('change', () => { buildSetMeta(); summarize(); });
+
+    function buildSetMeta() {
+      const n = Number(numSets.value || 0);
+      setPalettes.innerHTML='';
+      setColors.length = n;
+      const prevNames = {};
+      $$('#setPalettes input[data-set-name]').forEach(inp => { prevNames[inp.dataset.index]=inp.value; });
+      for (let i=0;i<n;i++) {
+        if (!setColors[i]) setColors[i] = PALETTE[i % PALETTE.length];
+        const row = document.createElement('div'); row.className='row'; row.style.flexWrap='wrap'; row.style.gap='6px';
+        const label = document.createElement('div'); label.className='help'; label.textContent=`Set ${i+1}`; label.style.minWidth='54px';
+  const select = document.createElement('select'); select.dataset.setColor='true'; select.dataset.index=String(i); select.setAttribute('data-set-color','true');
+  populateColorSelect(select, setColors[i]);
+  styleColorSelect(select);
+  select.addEventListener('change', ()=> { setColors[i]=select.value; styleColorSelect(select); });
+        row.appendChild(label); row.appendChild(select);
+  const nameInput=document.createElement('input'); nameInput.type='text'; nameInput.placeholder=`Set ${i+1} Name`; nameInput.dataset.setName='true'; nameInput.dataset.index=String(i); nameInput.value = prevNames[i] || `Set ${i+1}`; row.appendChild(nameInput);
+        setPalettes.appendChild(row);
+      }
+  // always include name input
+    }
+
+    function buildIntervalMeta() {
+      const n = Number(intervalsPerSet.value || 0);
+      const container = $('#intervalMeta');
+      if (!container) return;
+      container.innerHTML='';
+      intervalColors.length = n;
+      const prevNames = {};
+      $$('#intervalMeta input[data-interval-name]').forEach(inp=>{ prevNames[inp.dataset.index]=inp.value; });
+      const prevColors = {};
+      $$('#intervalMeta select[data-interval-color]').forEach(sel=>{ prevColors[sel.dataset.index]=sel.value; });
+      for (let i=0;i<n;i++) {
+        if (!intervalColors[i]) intervalColors[i] = prevColors[i] || PALETTE[i % PALETTE.length];
+        const row = document.createElement('div'); row.className='row'; row.style.flexWrap='wrap'; row.style.gap='6px';
+        const label = document.createElement('div'); label.className='help'; label.textContent=`Interval ${i+1}`; label.style.minWidth='70px';
+  const select = document.createElement('select'); select.dataset.intervalColor='true'; select.dataset.index=String(i); select.setAttribute('data-interval-color','true');
+  populateColorSelect(select, intervalColors[i]);
+  styleColorSelect(select);
+  select.addEventListener('change', ()=> { intervalColors[i]=select.value; styleColorSelect(select); });
+  row.appendChild(label);
+  row.appendChild(select);
+  const nameInput=document.createElement('input'); nameInput.type='text'; nameInput.placeholder=`Interval ${i+1} Name`; nameInput.dataset.intervalName='true'; nameInput.dataset.index=String(i); nameInput.value = prevNames[i] || `Interval ${i+1}`; row.appendChild(nameInput);
+        container.appendChild(row);
+      }
+      // always include name input
+    }
+
+    function buildSetNameInputs(){ buildSetMeta(); }
+    function buildIntervalNameInputs(){ buildIntervalMeta(); }
+
+    if (colourModeSwitch) {
+      colourModeSwitch.addEventListener('click', (e)=> {
+        const btn = e.target.closest('button[data-mode]'); if (!btn) return;
+        const mode = btn.dataset.mode; const intervalMode = mode === 'interval';
+        document.body.classList.toggle('colour-by-interval', intervalMode);
+        colourModeSwitch.querySelectorAll('button').forEach(b=> b.classList.toggle('active', b===btn));
+        buildIntervalMeta(); summarize();
+      });
+    }
+
+    $('#autoColors').addEventListener('click', () => {
+      const n = Number(numSets.value || 0);
+      for (let i = 0; i < n; i++) setColors[i] = PALETTE[(i*2) % PALETTE.length];
+      buildSetMeta();
+      buildIntervalMeta();
+    });
+
+  // (Color select helpers already defined earlier)
+
+    // ---------- Build plan ----------
+    function buildPlan() {
+      const sets = Number(numSets.value || 1);
+      const intervals = Number(intervalsPerSet.value || 1);
+      const modeVal = mode.value;
+      const intervalBreakSeconds = toSeconds(modeVal === 'same' ? breakLen.value : breakLen2.value);
+      const setBreakSeconds = toSeconds(setBreakLen.value);
+      // Capture names (arrays aligned by index)
+  const setNames = Array.from(document.querySelectorAll('#setPalettes input[data-set-name]')).map(i=>i.value.trim()||'').slice(0, sets);
+  const intervalNames = Array.from(document.querySelectorAll('#intervalMeta input[data-interval-name]')).map(i=>i.value.trim()||'').slice(0, intervals);
+
+      const plan = [];
+      for (let s = 0; s < sets; s++) {
+        const setColor = setColors[s] || PALETTE[s % PALETTE.length];
+        for (let i = 0; i < intervals; i++) {
+          const work = modeVal === 'same'
+            ? toSeconds(sameLen.value)
+            : toSeconds((intervalList.querySelector(`input[data-idx="${i}"]`) || {}).value);
+            const color = currentColourModeInterval() ? (intervalColors[i] || setColor) : setColor;
+            if (work > 0) plan.push({ type: 'work', set: s+1, interval: i+1, seconds: work, color, setName: setNames[s] || `Set ${s+1}`, intervalName: intervalNames[i] || `Interval ${i+1}` });
+          if (i < intervals - 1 && intervalBreakSeconds > 0) {
+            plan.push({ type: 'break', set: s+1, interval: i+1, seconds: intervalBreakSeconds, color: breakColor });
+          }
+        }
+        if (s < sets - 1 && setBreakSeconds > 0) {
+          plan.push({ type: 'break', set: s+1, interval: intervals, seconds: setBreakSeconds, color: breakColor });
+        }
+      }
+      return plan;
+    }
+
+    // ---------- Validation + Summary ----------
+    function clearInvalid() { $$('.invalid').forEach(el => el.classList.remove('invalid')); }
+
+    function validate() {
+      clearInvalid();
+      const errors = [];
+      const m = mode.value;
+      const sets = parseInt(numSets.value, 10) || 0;
+      const iters = parseInt(intervalsPerSet.value, 10) || 0;
+
+      if (sets < 1) { errors.push('Number of sets must be at least 1'); numSets.classList.add('invalid'); }
+      if (iters < 1) { errors.push('Intervals per set must be at least 1'); intervalsPerSet.classList.add('invalid'); }
+
+      if (m === 'same') {
+        if (toSeconds(sameLen.value) <= 0) { errors.push('Interval length must be greater than 0s'); sameLen.classList.add('invalid'); }
+      } else {
+        const inputs = Array.from(intervalList.querySelectorAll('input'));
+        const anyPositive = inputs.some(inp => toSeconds(inp.value) > 0);
+        if (!anyPositive) { errors.push('At least one interval must be greater than 0s'); inputs.forEach(i=>i.classList.add('invalid')); }
+      }
+      return errors;
+    }
+
+    function summarize() {
+      const plan = buildPlan();
+      const total = plan.reduce((acc, step) => acc + step.seconds, 0);
+      const steps = plan.length;
+      let nameInfo = '';
+  nameInfo += currentColourModeInterval() ? ' • Colours by interval' : ' • Colours by set';
+      summaryEl.textContent = steps ? `Plan: ${steps} steps • Total ${fmtTotal(total)}${nameInfo}` : 'Plan: (no steps yet)';
+    }
+
+    // ---------- Timer engine (rAF) ----------
+  let rafId = null, lastTs = null, idx = 0, remaining = 0, running = false, planState = [];
+  let totalPlanSeconds = 0; // total workout duration
+  let cumDurations = []; // cumulative seconds at start of each step
+
+    function updateUI() {
+      const step = planState[idx];
+      if (!step) { phaseEl.innerHTML = 'Ready <span class="meta">—</span>'; timeEl.textContent = '00:00'; subEl.textContent = '—'; statusEl.textContent = ''; setBg(''); return; }
+      if (step.type === 'break') {
+        phaseEl.innerHTML = 'BREAK <span class="meta">&nbsp;</span>';
+      } else {
+        const title = (workoutName.value.trim() || '').toUpperCase() || 'WORK';
+  const topLine = step.setName ? step.setName : `Set ${step.set}`;
+  phaseEl.innerHTML = `${title}<span class="meta">${topLine}</span>`;
+      }
+      timeEl.textContent = fmt(remaining);
+      // Sub line: step count + interval name if available (work) else type
+  const descriptor = (step.type === 'work' && step.intervalName) ? step.intervalName : step.type.toUpperCase();
+  // Remaining total time countdown (includes current step remaining + all future steps)
+  let elapsedBefore = cumDurations[idx] || 0;
+  const stepElapsed = (planState[idx].seconds - remaining);
+  const elapsed = elapsedBefore + stepElapsed;
+  const remainingTotal = Math.max(0, totalPlanSeconds - elapsed);
+  subEl.innerHTML = `${idx+1} / ${planState.length} • ${descriptor}<br><span class="remaining">TOTAL TIME REMAINING: ${fmtTotal(remainingTotal)}</span>`;
+      if (step.color) setBg(step.color);
+    }
+    function startStep() { const step = planState[idx]; if (!step) { finish(); return; } remaining = step.seconds; lastTs = null; updateUI(); }
+    function nextStep() { idx += 1; if (idx >= planState.length) { finish(); return; } startStep(); }
+    function loop(ts) {
+      if (!running) return;
+      if (lastTs == null) lastTs = ts;
+      const dt = (ts - lastTs) / 1000; lastTs = ts; remaining -= dt;
+      if (remaining <= 0) { beep(); nextStep(); }
+      updateUI();
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function start() {
+      const errs = validate();
+      if (errs.length) { statusEl.textContent = 'Fix: ' + errs.join(' • '); return; }
+      planState = buildPlan();
+      if (!planState.length) { statusEl.textContent = 'Please enter valid durations.'; return; }
+      // Precompute cumulative durations & total for fast remaining calculation
+      cumDurations = []; let acc = 0; for (const st of planState) { cumDurations.push(acc); acc += st.seconds; } totalPlanSeconds = acc;
+      idx = 0; running = true; startStep();
+      cancelAnimationFrame(rafId); rafId = requestAnimationFrame(loop);
+      startBtn.disabled = true; pauseBtn.disabled = false; resumeBtn.disabled = true; resetBtn.disabled = false; statusEl.textContent = 'Running…';
+    }
+
+    function pause() { running = false; pauseBtn.disabled = true; resumeBtn.disabled = false; statusEl.textContent = 'Paused'; cancelAnimationFrame(rafId); rafId = null; }
+    function resume() { if (running) return; running = true; pauseBtn.disabled = false; resumeBtn.disabled = true; statusEl.textContent = 'Running…'; lastTs = null; rafId = requestAnimationFrame(loop); }
+  function reset() { running = false; cancelAnimationFrame(rafId); rafId = null; idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = []; startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true; updateUI(); statusEl.textContent = 'Reset'; summarize(); }
+  function finish() { running = false; cancelAnimationFrame(rafId); rafId = null; beep(220, 660); beep(220, 990); statusEl.textContent = 'Done!'; startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = false; phaseEl.innerHTML = 'Finished <span class="meta">—</span>'; timeEl.textContent = '00:00'; subEl.innerHTML = `<span class="remaining">TOTAL DURATION: ${fmtTotal(totalPlanSeconds)}</span>`; }
+
+    // ---------- Options Toggle ----------
+    function toggleOptions() {
+      const isHidden = controlsPanel.style.display === 'none';
+      controlsPanel.style.display = isHidden ? 'grid' : 'none';
+      toggleOptionsBtn.classList.toggle('active', isHidden);
+      toggleOptionsBtn.textContent = isHidden ? 'Hide Controls' : 'Show Controls';
+    }
+    toggleOptionsBtn.addEventListener('click', toggleOptions);
+
+    // Spacebar shortcut (pause/resume) with safeguards
+    window.addEventListener('keydown', (e) => {
+      if (e.code !== 'Space') return;
+      // Ignore if focus is in a text-editable element
+      const ae = document.activeElement;
+      if (ae && (ae.isContentEditable || (ae.tagName === 'INPUT' && ae.type !== 'button' && ae.type !== 'checkbox') || ae.tagName === 'TEXTAREA')) return;
+      // Only act if a session has started (start button disabled)
+      if (!startBtn.disabled) return;
+      // Prevent page scroll
+      e.preventDefault();
+      if (!pauseBtn.disabled) {
+        pause();
+      } else if (!resumeBtn.disabled) {
+        resume();
+      }
+    });
+
+    // ---------- Init ----------
+    function init() {
+      refreshMode();
+      buildIntervalInputs();
+      buildSetMeta();
+      buildIntervalMeta();
+      buildBreakColorSelect();
+      summarize();
+      [sameLen, breakLen, breakLen2, setBreakLen, numSets, intervalsPerSet, workoutName].forEach(el => el.addEventListener('input', summarize));
+      loadFavorites();
+
+      // Bind buttons – script runs at end of <body> so DOM is already ready
+      startBtn.addEventListener('click', start);
+      pauseBtn.addEventListener('click', pause);
+      resumeBtn.addEventListener('click', resume);
+      resetBtn.addEventListener('click', reset);
+      if (saveFavBtn) saveFavBtn.addEventListener('click', saveFavoritePrompt);
+      if (headerSaveFavBtn) headerSaveFavBtn.addEventListener('click', saveFavoritePrompt);
+      if (exportFavsBtn) exportFavsBtn.addEventListener('click', exportFavorites);
+      if (importFavsBtn && importFavsFile) importFavsBtn.addEventListener('click', () => importFavsFile.click());
+      if (importFavsFile) importFavsFile.addEventListener('change', handleImportFile);
+      if (quickFavSelect) {
+        quickFavSelect.addEventListener('change', () => {
+          const i = quickFavSelect.selectedIndex;
+          if (i > 0) {
+            const name = quickFavSelect.options[i].textContent;
+            let list = [];
+            try { list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch (e) {}
+            const fav = list.find(f => f.name === name);
+            if (fav) applyConfig(fav);
+            quickFavSelect.value = '';
+          }
+        });
+      }
+    }
+    init();
+
+    // ---------- Favourites (localStorage) ----------
+    const FAV_KEY = 'intervalTimer.favorites.v1';
+
+    function getCurrentConfig(name) {
+      const modeVal = mode.value;
+      const sets = Number(numSets.value || 1);
+      const intervals = Number(intervalsPerSet.value || 1);
+      const individualIntervals = [];
+      if (modeVal === 'individual') {
+        for (let i=0; i<intervals; i++) {
+          const v = (intervalList.querySelector(`input[data-idx="${i}"]`)||{}).value || '';
+          individualIntervals.push(v);
+        }
+      }
+      const setNames = Array.from(document.querySelectorAll('#setPalettes input[data-set-name]')).map(i=>i.value.trim() || '');
+      const intervalNames = Array.from(document.querySelectorAll('#intervalMeta input[data-interval-name]')).map(i=>i.value.trim() || '');
+      return {
+        name: name || 'Unnamed',
+        mode: modeVal,
+        numSets: sets,
+        intervalsPerSet: intervals,
+        sameLen: sameLen.value,
+        breakLen: breakLen.value,
+        breakLen2: breakLen2.value,
+        setBreakLen: setBreakLen.value,
+  setColors: [...setColors],
+  intervalColors: [...intervalColors],
+        breakColor,
+        individualIntervals,
+        setNames,
+        intervalNames,
+  coloursByInterval: currentColourModeInterval(),
+        ts: Date.now(),
+        workoutTitle: workoutName.value || ''
+      };
+    }
+
+    function loadFavorites() {
+      let list = [];
+      try { list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); if (!Array.isArray(list)) list = []; } catch(e){ list = []; }
+      renderFavorites(list);
+    }
+
+    function saveFavorites(list) {
+      localStorage.setItem(FAV_KEY, JSON.stringify(list));
+      renderFavorites(list);
+      updateQuickFavSelect(list);
+    }
+
+    function updateQuickFavSelect(list) {
+      if (!quickFavSelect) return;
+      quickFavSelect.innerHTML = '<option value="">Load Saved...</option>';
+      if (!list || !list.length) {
+        quickFavSelect.style.display = 'none';
+        return;
+      }
+      quickFavSelect.style.display = 'inline-block';
+      list.sort((a,b)=> a.name.localeCompare(b.name));
+      list.forEach((fav, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx; // using index for simplicity since we sort same way
+        opt.textContent = fav.name;
+        quickFavSelect.appendChild(opt);
+      });
+    }
+
+    function saveFavoritePrompt() {
+      const defaultName = workoutName.value.trim() || 'My Workout';
+      const name = prompt('Enter name for this favourite:', defaultName);
+      if (!name) return;
+      let list = [];
+      try { list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); if (!Array.isArray(list)) list = []; } catch(e){ list = []; }
+      const cfg = getCurrentConfig(name.trim());
+      // Replace if name exists
+      const idx = list.findIndex(f => f.name.toLowerCase() === cfg.name.toLowerCase());
+      if (idx >= 0) list[idx] = cfg; else list.push(cfg);
+      saveFavorites(list);
+      statusEl.textContent = `Saved favourite: ${cfg.name}`;
+    }
+
+    function renderFavorites(list) {
+      updateQuickFavSelect(list);
+      if (!favouritesList) return;
+      favouritesList.innerHTML = '';
+      if (!list.length) { const empty = document.createElement('div'); empty.textContent = 'No favourites yet.'; favouritesList.appendChild(empty); return; }
+      list.sort((a,b)=> a.name.localeCompare(b.name));
+      list.forEach(fav => {
+        const row = document.createElement('div'); row.className='row'; row.style.gap='6px';
+        const nameSpan = document.createElement('div'); nameSpan.textContent = fav.name; nameSpan.style.flex='1'; nameSpan.style.whiteSpace='nowrap'; nameSpan.style.overflow='hidden'; nameSpan.style.textOverflow='ellipsis';
+        const loadBtn = document.createElement('button'); loadBtn.className='btn'; loadBtn.style.padding='4px 10px'; loadBtn.textContent='Load';
+        loadBtn.addEventListener('click', ()=> applyConfig(fav));
+        const delBtn = document.createElement('button'); delBtn.className='btn danger'; delBtn.style.padding='4px 10px'; delBtn.textContent='✕'; delBtn.title='Delete';
+        delBtn.addEventListener('click', ()=> { if (confirm(`Delete favourite "${fav.name}"?`)) { const cur = JSON.parse(localStorage.getItem(FAV_KEY)||'[]').filter(x=>x.name!==fav.name); saveFavorites(cur); } });
+        row.appendChild(nameSpan); row.appendChild(loadBtn); row.appendChild(delBtn);
+        favouritesList.appendChild(row);
+      });
+    }
+
+    function applyConfig(cfg) {
+      if (!cfg) return;
+      mode.value = cfg.mode || 'same';
+      numSets.value = cfg.numSets || 1;
+      intervalsPerSet.value = cfg.intervalsPerSet || 1;
+      refreshMode();
+      buildIntervalInputs();
+      // Fill interval values if individual
+      if (cfg.mode === 'individual' && Array.isArray(cfg.individualIntervals)) {
+        cfg.individualIntervals.forEach((val,i)=> {
+          const inp = intervalList.querySelector(`input[data-idx="${i}"]`); if (inp) inp.value = val;
+        });
+      }
+      sameLen.value = cfg.sameLen || sameLen.value;
+      breakLen.value = cfg.breakLen || breakLen.value;
+      breakLen2.value = cfg.breakLen2 || breakLen2.value;
+      setBreakLen.value = cfg.setBreakLen || setBreakLen.value;
+      // Colors
+  if (Array.isArray(cfg.setColors)) setColors = cfg.setColors.slice();
+  if (Array.isArray(cfg.intervalColors)) intervalColors = cfg.intervalColors.slice();
+      if (cfg.breakColor) breakColor = cfg.breakColor;
+  buildSetMeta();
+  buildIntervalMeta();
+  buildBreakColorSelect();
+      // Names toggles
+  document.body.classList.toggle('colour-by-interval', !!cfg.coloursByInterval);
+  if (colourModeSwitch) {
+    colourModeSwitch.querySelectorAll('button').forEach(b=> b.classList.toggle('active', !!cfg.coloursByInterval ? b.dataset.mode==='interval' : b.dataset.mode==='set'));
+  }
+  buildSetMeta(); buildIntervalMeta();
+  if (cfg.setNames) cfg.setNames.forEach((v,i)=> { const inp = document.querySelector(`#setPalettes input[data-set-name][data-index="${i}"]`); if (inp) inp.value = v || `Set ${i+1}`; });
+  if (cfg.intervalNames) cfg.intervalNames.forEach((v,i)=> { const inp = document.querySelector(`#intervalMeta input[data-interval-name][data-index="${i}"]`); if (inp) inp.value = v || `Interval ${i+1}`; });
+      if (cfg.workoutTitle) workoutName.value = cfg.workoutTitle;
+      // Restyle selects after applying config
+      $$('#setPalettes select[data-set-color]').forEach(styleColorSelect);
+      $$('#intervalMeta select[data-interval-color]').forEach(styleColorSelect);
+      styleColorSelect(breakColorSelect);
+      summarize();
+      statusEl.textContent = `Loaded favourite: ${cfg.name}`;
+    }
+
+    // ---------- Export / Import ----------
+    function exportFavorites() {
+      try {
+        const list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+        const blob = new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.download = `interval-timer-favourites-${new Date().toISOString().slice(0,10)}.json`;
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=> URL.revokeObjectURL(a.href), 1000);
+        statusEl.textContent = 'Exported favourites';
+      } catch (e) { alert('Failed to export favourites.'); }
+    }
+
+    function handleImportFile(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          let incoming = JSON.parse(String(reader.result || 'null'));
+          if (!incoming) return;
+          if (!Array.isArray(incoming)) incoming = [incoming];
+          incoming = incoming.filter(obj => obj && obj.name);
+          let existing = [];
+          try { existing = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); if (!Array.isArray(existing)) existing = []; } catch(e){ existing = []; }
+          // Merge by name (case-insensitive replace)
+          incoming.forEach(cfg => {
+            const idx = existing.findIndex(f => f.name.toLowerCase() === cfg.name.toLowerCase());
+            if (idx >= 0) existing[idx] = cfg; else existing.push(cfg);
+          });
+            saveFavorites(existing);
+          statusEl.textContent = `Imported ${incoming.length} favourite(s)`;
+        } catch(err) {
+          alert('Invalid favourites file.');
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>

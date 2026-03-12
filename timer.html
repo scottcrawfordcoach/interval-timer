@@ -775,6 +775,8 @@
       idx = 0; running = true; startStep();
       cancelAnimationFrame(rafId); rafId = requestAnimationFrame(loop);
       startBtn.disabled = true; pauseBtn.disabled = false; resumeBtn.disabled = true; resetBtn.disabled = false; statusEl.textContent = 'Running…';
+      // Auto-hide controls when timer starts
+      if (controlsPanel.style.display !== 'none') toggleOptions();
     }
 
     function pause() { running = false; pauseBtn.disabled = true; resumeBtn.disabled = false; statusEl.textContent = 'Paused'; cancelAnimationFrame(rafId); rafId = null; }

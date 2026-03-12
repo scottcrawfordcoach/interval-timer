@@ -102,14 +102,12 @@
     .compact .hud { display: flex; }
 
     /* ====== Install banner ====== */
-    .install-banner { display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.75); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); place-items:center; }
-    .install-banner.visible { display:grid; }
-    .install-banner .install-card { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:28px 24px; max-width:380px; width:calc(100% - 32px); text-align:center; }
-    .install-banner .install-card h2 { margin:0 0 8px; font-size:20px; }
-    .install-banner .install-card p { color:var(--muted); font-size:14px; line-height:1.5; margin:0 0 16px; }
-    .install-banner .install-card .install-steps { text-align:left; color:var(--muted); font-size:13px; line-height:1.6; margin:0 0 20px; padding-left:20px; }
-    .install-banner .install-card .install-steps li { margin-bottom:4px; }
-    .install-banner .btn-row { display:flex; gap:10px; justify-content:center; }
+    .install-banner { display:none; background:linear-gradient(90deg, #1a2340, #151b2f); border-bottom:1px solid var(--border); padding:10px clamp(12px, 3vw, 28px); align-items:center; gap:10px; z-index:100; }
+    .install-banner.visible { display:flex; flex-wrap:wrap; }
+    .install-banner .install-text { flex:1; font-size:13px; color:var(--muted); line-height:1.4; }
+    .install-banner .install-text strong { color:var(--fg); }
+    .install-banner .btn-row { display:flex; gap:8px; align-items:center; }
+    .install-banner .dismiss-btn { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:4px 8px; line-height:1; }
 
     /* ====== Mobile & touch optimisation ====== */
     @media screen and (max-width: 768px) {
@@ -144,6 +142,15 @@
   </style>
 </head>
 <body>
+  <!-- Install Banner (slim top bar) -->
+  <div class="install-banner" id="installBanner">
+    <div class="install-text" id="installText"><strong>Install this timer on your device</strong> for quick, full-screen access.</div>
+    <div class="btn-row">
+      <button class="btn primary" id="installActionBtn" style="padding:6px 16px; font-size:13px;">Install</button>
+      <button class="dismiss-btn" id="installDismiss" title="Dismiss">&times;</button>
+    </div>
+  </div>
+
   <header style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
     <h1><span style="opacity:.5; font-weight:400">Crawford Coaching</span> Interval Timer</h1>
     <div class="row" style="gap:6px">
@@ -287,24 +294,6 @@
     </section>
   </main>
 
-  <!-- Install Banner (shown via ?install=1) -->
-  <div class="install-banner" id="installBanner">
-    <div class="install-card">
-      <h2>Install Interval Timer</h2>
-      <p>Add this app to your home screen for quick, full-screen access — no app store needed.</p>
-      <div id="installNative" style="display:none">
-        <button class="btn primary" id="installNativeBtn" style="font-size:16px; padding:12px 28px; width:100%;">Install Now</button>
-        <div style="height:12px"></div>
-      </div>
-      <div id="installManual">
-        <ol class="install-steps" id="installSteps"></ol>
-      </div>
-      <div class="btn-row">
-        <button class="btn" id="installDismiss" style="padding:10px 24px;">Continue to Timer</button>
-      </div>
-    </div>
-  </div>
-
   <footer>
     <a href="https://crawfordcoaching.com" target="_blank" rel="noopener" style="color:var(--muted); text-decoration:none;">Crawford Coaching</a> Interval Timer &mdash; &copy; 2026 Scott Crawford
   </footer>
@@ -326,71 +315,58 @@
 
     // ---------- PWA Install ----------
     let deferredInstallPrompt = null;
+    const INSTALL_DISMISS_KEY = 'intervalTimer.installDismissed';
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredInstallPrompt = e;
-      // If install banner is showing, enable native button
-      const nativeBlock = document.getElementById('installNative');
-      if (nativeBlock) nativeBlock.style.display = 'block';
+      // Update button text if banner is visible
+      const btn = document.getElementById('installActionBtn');
+      if (btn) btn.textContent = 'Install Now';
     });
 
     (function initInstallBanner() {
-      if (!new URLSearchParams(window.location.search).has('install')) return;
-      // Already installed as standalone? Skip banner.
+      // Already installed as standalone? Don't show.
       if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) return;
+      // User previously dismissed? Don't nag.
+      if (localStorage.getItem(INSTALL_DISMISS_KEY)) return;
 
       const banner = document.getElementById('installBanner');
-      const stepsEl = document.getElementById('installSteps');
-      const nativeBlock = document.getElementById('installNative');
-      const nativeBtn = document.getElementById('installNativeBtn');
+      const actionBtn = document.getElementById('installActionBtn');
       const dismissBtn = document.getElementById('installDismiss');
+      const textEl = document.getElementById('installText');
       if (!banner) return;
 
-      // Platform-specific instructions
+      // Platform-specific hint text
       const ua = navigator.userAgent;
       const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const isAndroid = /Android/.test(ua);
-      let steps = [];
       if (isIOS) {
-        steps = [
-          'Tap the <b>Share</b> button (box with arrow) in Safari',
-          'Scroll down and tap <b>"Add to Home Screen"</b>',
-          'Tap <b>Add</b> to confirm'
-        ];
-      } else if (isAndroid) {
-        steps = [
-          'Tap the <b>\u22ee menu</b> (three dots) in your browser',
-          'Tap <b>"Install app"</b> or <b>"Add to Home Screen"</b>',
-          'Tap <b>Install</b> to confirm'
-        ];
-      } else {
-        steps = [
-          'Look for the <b>install icon</b> (\u229e) in the address bar',
-          'Or open the browser menu and choose <b>"Install Interval Timer"</b>',
-          'Click <b>Install</b> to confirm'
-        ];
+        textEl.innerHTML = '<strong>Install this timer on your device</strong> — tap Share then "Add to Home Screen".';
+        actionBtn.style.display = 'none'; // iOS can't trigger install programmatically
       }
-      stepsEl.innerHTML = steps.map(s => `<li>${s}</li>`).join('');
 
-      // If beforeinstallprompt already fired, show native button
-      if (deferredInstallPrompt && nativeBlock) nativeBlock.style.display = 'block';
-
-      if (nativeBtn) {
-        nativeBtn.addEventListener('click', async () => {
-          if (!deferredInstallPrompt) return;
-          deferredInstallPrompt.prompt();
-          const result = await deferredInstallPrompt.userChoice;
-          if (result.outcome === 'accepted') banner.classList.remove('visible');
-          deferredInstallPrompt = null;
+      if (actionBtn) {
+        actionBtn.addEventListener('click', async () => {
+          if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            const result = await deferredInstallPrompt.userChoice;
+            if (result.outcome === 'accepted') {
+              banner.classList.remove('visible');
+              localStorage.setItem(INSTALL_DISMISS_KEY, '1');
+            }
+            deferredInstallPrompt = null;
+          } else {
+            // Fallback: show brief instructions
+            textEl.innerHTML = '<strong>To install:</strong> open your browser menu and choose <b>"Install app"</b> or <b>"Add to Home Screen"</b>.';
+            actionBtn.style.display = 'none';
+          }
         });
       }
 
       if (dismissBtn) {
         dismissBtn.addEventListener('click', () => {
           banner.classList.remove('visible');
-          // Clean up URL
-          const url = new URL(window.location); url.searchParams.delete('install');
-          history.replaceState(null, '', url);
+          localStorage.setItem(INSTALL_DISMISS_KEY, '1');
         });
       }
 

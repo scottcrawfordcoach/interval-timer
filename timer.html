@@ -577,7 +577,7 @@
     </section>
 
     <!-- Timer Display -->
-    <section class="timer" id="display">
+    <section class="timer" id="display" style="display:none">
       <div class="label" id="phase">Ready <span class="meta">—</span></div>
       <div class="time" id="time">00:00</div>
       <div class="sub" id="sub">—</div>
@@ -1414,6 +1414,8 @@
     const emomTimerActionsBar = document.getElementById('emomTimerActions');
     const bottomControls = document.getElementById('bottomControls');
 
+    const displayPanel = document.getElementById('display');
+
     function hideAllPanels() {
       modeSelector.style.display = 'none';
       emomPanel.style.display = 'none';
@@ -1424,6 +1426,7 @@
       emomTimerActionsBar.style.display = 'none';
       bottomControls.style.display = 'none';
       headerToolbar.style.display = 'none';
+      displayPanel.style.display = 'none';
     }
 
     function switchToMain() {
@@ -1440,6 +1443,7 @@
     function switchToCustomTimer() {
       appMode = 'custom-timer';
       hideAllPanels();
+      displayPanel.style.display = '';
       controlsPanel.style.display = '';
       headerToolbar.style.display = '';
       toggleOptionsBtn.textContent = 'Hide Controls';
@@ -1497,6 +1501,7 @@
     function switchToEmomConfig() {
       appMode = 'emom-config';
       hideAllPanels();
+      displayPanel.style.display = '';
       emomPanel.style.display = '';
       emomInner.style.display = '';
       const configOpts = document.getElementById('emomConfigOptions');
@@ -1512,12 +1517,14 @@
     function switchToEmomActive() {
       appMode = 'emom-active';
       hideAllPanels();
+      displayPanel.style.display = '';
       bottomControls.style.display = 'flex';
     }
 
     function switchToEmomTimerConfig() {
       appMode = 'emom-timer-config';
       hideAllPanels();
+      displayPanel.style.display = '';
       emomTimerPanel.style.display = '';
       updateEtSummary();
       statusEl.textContent = '';
@@ -1526,6 +1533,7 @@
     function switchToEmomTimerActive() {
       appMode = 'emom-timer-active';
       hideAllPanels();
+      displayPanel.style.display = '';
       bottomControls.style.display = 'flex';
     }
 

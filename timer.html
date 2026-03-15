@@ -286,10 +286,10 @@
         <div class="help">Choose a workout mode</div>
       </div>
       <div class="mode-selector">
-        <button class="mode-btn coming-soon" id="modeEmomTimerBtn" disabled>
+        <button class="mode-btn" id="modeEmomTimerBtn">
           <span class="mode-icon">⏱️</span>
           <span>Quick EMOM Timer</span>
-          <span class="mode-sub">Coming Soon</span>
+          <span class="mode-sub">Set your own exercises &amp; reps</span>
         </button>
         <button class="mode-btn" id="modeEmomWorkoutBtn">
           <span class="mode-icon">⚡</span>
@@ -389,6 +389,46 @@
         <div id="emomNoMatch" style="display:none; text-align:center; padding:16px; color:var(--danger); font-size:13px;">
           No exercises match your selections. Try adding more equipment or broadening the difficulty.
         </div>
+      </div>
+    </section>
+
+    <!-- Quick EMOM Timer Config -->
+    <section class="card stack" id="emomTimerPanel" style="display:none">
+      <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+        <div style="display:flex; align-items:center; gap:10px">
+          <span style="font-size:20px">⏱️</span>
+          <div>
+            <div style="font-weight:700; font-size:15px;">Quick EMOM Timer</div>
+            <div class="help">Set your own exercises — 1 minute per exercise, every minute on the minute</div>
+          </div>
+        </div>
+        <button class="btn" id="emomTimerBackBtn">← Back</button>
+      </div>
+
+      <div class="grid cols-2" style="gap:14px; margin-top:8px;">
+        <label>
+          Number of exercises
+          <input id="etExercises" type="number" min="1" max="20" value="5" />
+          <span class="help">1 minute each (EMOM)</span>
+        </label>
+        <label>
+          Number of sets
+          <input id="etSets" type="number" min="1" max="10" value="3" />
+        </label>
+      </div>
+      <label>
+        Rest between sets (seconds)
+        <input id="etRest" type="number" min="0" max="300" value="60" />
+        <span class="help">0 for no rest</span>
+      </label>
+
+      <div id="etSummary" class="help" style="text-align:center; margin-top:4px;" aria-live="polite"></div>
+
+      <button class="btn primary" id="etStartBtn" style="width:100%; padding:14px; font-size:15px; margin-top:4px;">▶ Start EMOM Timer</button>
+
+      <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+        <button class="btn ghost" id="etReturnMainBtn" style="flex:1; font-size:12px;">← Return to Main Timer</button>
+        <a href="https://www.crawford-coaching.ca" target="_blank" rel="noopener" class="btn ghost" style="flex:1; font-size:12px; text-align:center; text-decoration:none;">Crawford Coaching Homepage →</a>
       </div>
     </section>
 
@@ -513,10 +553,16 @@
 
     </section>
 
-    <!-- EMOM Actions (visible during/after EMOM workout) -->
+    <!-- EMOM Workout Actions (visible during/after EMOM workout) -->
     <section id="emomActions" style="display:none; padding:10px 16px; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center;">
       <button class="emom-nav-btn" id="emomActiveRerollBtn">🎲 Re-roll Workout</button>
       <button class="emom-nav-btn" id="emomActiveReturnBtn">← Return to Main Timer</button>
+      <a href="https://www.crawford-coaching.ca" target="_blank" rel="noopener" class="emom-nav-btn" style="text-decoration:none;">Crawford Coaching Homepage →</a>
+    </section>
+
+    <!-- EMOM Timer Actions (visible during/after EMOM timer) -->
+    <section id="emomTimerActions" style="display:none; padding:10px 16px; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center;">
+      <button class="emom-nav-btn" id="etActiveReturnBtn">← Return to Main Timer</button>
       <a href="https://www.crawford-coaching.ca" target="_blank" rel="noopener" class="emom-nav-btn" style="text-decoration:none;">Crawford Coaching Homepage →</a>
     </section>
 
@@ -1008,6 +1054,7 @@
     function resume() { if (running) return; running = true; pauseBtn.disabled = false; resumeBtn.disabled = true; statusEl.textContent = 'Running…'; lastTs = null; rafId = requestAnimationFrame(loop); }
   function reset() {
     if (appMode === 'emom-active') { emomReset(); return; }
+    if (appMode === 'emom-timer-active') { emomTimerReset(); return; }
     running = false; cancelAnimationFrame(rafId); rafId = null; idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = []; startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true; updateUI(); statusEl.textContent = 'Reset'; summarize();
   }
   function emomReset() {
@@ -1018,10 +1065,19 @@
     switchToEmomConfig();
     statusEl.textContent = 'Reset — workout preserved';
   }
+  function emomTimerReset() {
+    running = false; cancelAnimationFrame(rafId); rafId = null;
+    idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = [];
+    startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true;
+    updateUI(); setBg('');
+    switchToEmomTimerConfig();
+    statusEl.textContent = 'Reset — settings preserved';
+  }
   function finish() {
     running = false; cancelAnimationFrame(rafId); rafId = null; beep(220, 660); beep(220, 990);
     statusEl.textContent = 'Done!';
-    startBtn.disabled = (appMode === 'emom-active');
+    const isEmomMode = (appMode === 'emom-active' || appMode === 'emom-timer-active');
+    startBtn.disabled = isEmomMode;
     pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = false;
     phaseEl.innerHTML = 'Finished <span class="meta">—</span>'; timeEl.textContent = '00:00';
     const countdownTime = (planState.length > 0 && planState[0].type === 'countdown') ? planState[0].seconds : 0;
@@ -1290,12 +1346,24 @@
     });
 
     // ---------- App Mode State Machine ----------
-    let appMode = 'main'; // 'main' | 'emom-config' | 'emom-active'
+    let appMode = 'main'; // 'main' | 'emom-config' | 'emom-active' | 'emom-timer-config' | 'emom-timer-active'
     const emomPanel = document.getElementById('emomPanel');
     const emomInner = document.getElementById('emomInner');
+    const emomTimerPanel = document.getElementById('emomTimerPanel');
     const modeSelector = document.getElementById('modeSelector');
     const emomActionsBar = document.getElementById('emomActions');
+    const emomTimerActionsBar = document.getElementById('emomTimerActions');
     const bottomControls = document.getElementById('bottomControls');
+
+    function hideAllPanels() {
+      modeSelector.style.display = 'none';
+      emomPanel.style.display = 'none';
+      emomTimerPanel.style.display = 'none';
+      controlsPanel.style.display = 'none';
+      emomActionsBar.style.display = 'none';
+      emomTimerActionsBar.style.display = 'none';
+      bottomControls.style.display = 'none';
+    }
 
     function switchToMain() {
       appMode = 'main';
@@ -1303,11 +1371,10 @@
       idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = [];
       startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true;
       updateUI(); setBg('');
+      hideAllPanels();
       modeSelector.style.display = '';
-      emomPanel.style.display = 'none';
       controlsPanel.style.display = '';
       toggleOptionsBtn.textContent = 'Hide Controls';
-      emomActionsBar.style.display = 'none';
       bottomControls.style.display = 'flex';
       statusEl.textContent = '';
       summarize();
@@ -1315,35 +1382,46 @@
 
     function switchToEmomConfig() {
       appMode = 'emom-config';
-      modeSelector.style.display = 'none';
+      hideAllPanels();
       emomPanel.style.display = '';
       emomInner.style.display = '';
-      controlsPanel.style.display = 'none';
-      emomActionsBar.style.display = 'none';
-      bottomControls.style.display = 'none';
       if (currentEmomPlan) renderEmomPreview(currentEmomPlan);
       statusEl.textContent = '';
     }
 
     function switchToEmomActive() {
       appMode = 'emom-active';
-      modeSelector.style.display = 'none';
-      emomPanel.style.display = 'none';
-      controlsPanel.style.display = 'none';
+      hideAllPanels();
       emomActionsBar.style.display = 'flex';
+      bottomControls.style.display = 'flex';
+    }
+
+    function switchToEmomTimerConfig() {
+      appMode = 'emom-timer-config';
+      hideAllPanels();
+      emomTimerPanel.style.display = '';
+      updateEtSummary();
+      statusEl.textContent = '';
+    }
+
+    function switchToEmomTimerActive() {
+      appMode = 'emom-timer-active';
+      hideAllPanels();
+      emomTimerActionsBar.style.display = 'flex';
       bottomControls.style.display = 'flex';
     }
 
     // Mode selector buttons
     document.getElementById('modeEmomWorkoutBtn').addEventListener('click', switchToEmomConfig);
+    document.getElementById('modeEmomTimerBtn').addEventListener('click', switchToEmomTimerConfig);
 
-    // EMOM panel back button
+    // EMOM Workout panel back button
     document.getElementById('emomBackBtn').addEventListener('click', switchToMain);
 
-    // EMOM preview navigation
+    // EMOM Workout preview navigation
     document.getElementById('emomReturnMainBtn').addEventListener('click', switchToMain);
 
-    // EMOM active bar buttons
+    // EMOM Workout active bar buttons
     document.getElementById('emomActiveRerollBtn').addEventListener('click', async () => {
       running = false; cancelAnimationFrame(rafId); rafId = null;
       idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = [];
@@ -1353,6 +1431,11 @@
       await handleGenerate();
     });
     document.getElementById('emomActiveReturnBtn').addEventListener('click', switchToMain);
+
+    // EMOM Timer panel buttons
+    document.getElementById('emomTimerBackBtn').addEventListener('click', switchToMain);
+    document.getElementById('etReturnMainBtn').addEventListener('click', switchToMain);
+    document.getElementById('etActiveReturnBtn').addEventListener('click', switchToMain);
 
     // EMOM helpers
     function getActiveVals(containerId) {
@@ -1670,6 +1753,87 @@
     emomAskAssistantBtn.addEventListener('click', () => {
       window.open('https://www.crawford-coaching.ca/assistant', '_blank', 'noopener');
     });
+
+    // ---------- Quick EMOM Timer ----------
+    const etExercises = document.getElementById('etExercises');
+    const etSets = document.getElementById('etSets');
+    const etRest = document.getElementById('etRest');
+    const etSummaryEl = document.getElementById('etSummary');
+    const etStartBtn = document.getElementById('etStartBtn');
+
+    function updateEtSummary() {
+      const ex = Math.max(1, parseInt(etExercises.value, 10) || 1);
+      const sets = Math.max(1, parseInt(etSets.value, 10) || 1);
+      const rest = Math.max(0, parseInt(etRest.value, 10) || 0);
+      const workSec = ex * sets * 60;
+      const restSec = rest * (sets - 1);
+      const total = workSec + restSec;
+      etSummaryEl.textContent = `${ex} exercises × ${sets} sets = ${ex * sets} minutes work` +
+        (rest > 0 && sets > 1 ? ` + ${fmtTotal(restSec)} rest` : '') +
+        ` • Total: ${fmtTotal(total)}`;
+    }
+
+    [etExercises, etSets, etRest].forEach(el => el.addEventListener('input', updateEtSummary));
+
+    function startEmomTimer() {
+      const numEx = Math.max(1, parseInt(etExercises.value, 10) || 1);
+      const numSetsVal = Math.max(1, parseInt(etSets.value, 10) || 1);
+      const restSec = Math.max(0, parseInt(etRest.value, 10) || 0);
+
+      const timerPlan = [];
+
+      for (let s = 0; s < numSetsVal; s++) {
+        const setColor = EMOM_SET_COLORS[s % EMOM_SET_COLORS.length];
+        for (let i = 0; i < numEx; i++) {
+          timerPlan.push({
+            type: 'work',
+            set: s + 1,
+            interval: i + 1,
+            seconds: 60,
+            color: setColor,
+            setName: `Set ${s + 1} of ${numSetsVal}`,
+            intervalName: `Exercise ${i + 1} of ${numEx}`
+          });
+        }
+        if (s < numSetsVal - 1 && restSec > 0) {
+          timerPlan.push({
+            type: 'break',
+            set: s + 1,
+            interval: numEx,
+            seconds: restSec,
+            color: '#ef4444'
+          });
+        }
+      }
+
+      timerPlan.unshift({ type: 'countdown', seconds: 5, color: null });
+
+      const totalSec = numEx * numSetsVal * 60 + restSec * (numSetsVal - 1);
+      workoutName.value = `EMOM Timer ${fmtTotal(totalSec)}`;
+
+      planState = timerPlan;
+      cumDurations = [];
+      let acc = 0;
+      for (const st of planState) { cumDurations.push(acc); acc += st.seconds; }
+      totalPlanSeconds = acc;
+
+      idx = 0;
+      running = true;
+      startStep();
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(loop);
+
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+      resumeBtn.disabled = true;
+      resetBtn.disabled = false;
+      statusEl.textContent = 'Running…';
+
+      switchToEmomTimerActive();
+      document.getElementById('display').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    etStartBtn.addEventListener('click', startEmomTimer);
 
   </script>
 </body>

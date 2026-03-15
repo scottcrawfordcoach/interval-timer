@@ -161,6 +161,30 @@
     .emom-modal p { font-size:13px; color:var(--muted); line-height:1.5; margin:0 0 16px; }
     .emom-modal .btn { width:100%; margin-top:8px; }
 
+    /* Mode selector card */
+    .mode-selector { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
+    .mode-btn {
+      flex:1 1 220px; max-width:340px; padding:28px 20px;
+      border-radius:16px; font-size:16px; font-weight:700;
+      cursor:pointer; transition:all .15s; text-align:center;
+      border:2px solid var(--border); background:var(--card); color:var(--fg);
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+    }
+    .mode-btn:hover { border-color:var(--accent); background:#16213a; transform:translateY(-2px); }
+    .mode-btn:active { transform:translateY(0); }
+    .mode-btn.coming-soon { opacity:0.5; cursor:default; }
+    .mode-btn.coming-soon:hover { border-color:var(--border); background:var(--card); transform:none; }
+    .mode-btn .mode-icon { font-size:36px; }
+    .mode-btn .mode-sub { font-size:12px; color:var(--muted); font-weight:400; }
+
+    /* EMOM nav buttons */
+    .emom-nav-btn {
+      padding:10px 18px; border-radius:10px; font-size:13px; font-weight:600;
+      cursor:pointer; border:1px solid var(--border); background:var(--card); color:var(--fg);
+      transition:background .12s, border-color .12s; white-space:nowrap;
+    }
+    .emom-nav-btn:hover { border-color:var(--accent); background:#16213a; }
+
     /* Swatch palette */
     .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
     .swatch { border: 1px solid var(--border); height: 28px; border-radius: 10px; cursor: pointer; position: relative; outline: none; display: inline-block; }
@@ -246,7 +270,6 @@
   <header style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
     <h1><span style="opacity:.5; font-weight:400">Crawford Coaching</span> Interval Timer</h1>
     <div class="row" style="gap:6px">
-      <button class="btn primary" id="headerEmomBtn" style="padding:8px 14px; font-size:13px;">⚡ Quick EMOM</button>
       <select id="quickFavSelect" style="max-width:160px; display:none">
         <option value="">Load Saved…</option>
       </select>
@@ -256,17 +279,37 @@
   </header>
 
   <main class="container">
+    <!-- Mode Selector -->
+    <section class="card" id="modeSelector" style="padding:24px;">
+      <div style="text-align:center; margin-bottom:16px;">
+        <div style="font-size:15px; font-weight:700; color:var(--fg);">Quick Start</div>
+        <div class="help">Choose a workout mode</div>
+      </div>
+      <div class="mode-selector">
+        <button class="mode-btn coming-soon" id="modeEmomTimerBtn" disabled>
+          <span class="mode-icon">⏱️</span>
+          <span>Quick EMOM Timer</span>
+          <span class="mode-sub">Coming Soon</span>
+        </button>
+        <button class="mode-btn" id="modeEmomWorkoutBtn">
+          <span class="mode-icon">⚡</span>
+          <span>Quick EMOM Workout</span>
+          <span class="mode-sub">Generate a random EMOM in seconds</span>
+        </button>
+      </div>
+    </section>
+
     <!-- Quick EMOM Generator -->
-    <section class="card stack" id="emomPanel">
+    <section class="card stack" id="emomPanel" style="display:none">
       <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
         <div style="display:flex; align-items:center; gap:10px">
           <span style="font-size:20px">⚡</span>
           <div>
-            <div style="font-weight:700; font-size:15px;">Quick EMOM</div>
+            <div style="font-weight:700; font-size:15px;">Quick EMOM Workout</div>
             <div class="help">Generate a random EMOM workout in seconds</div>
           </div>
         </div>
-        <button class="btn" id="emomToggleBtn">Hide</button>
+        <button class="btn" id="emomBackBtn">← Back</button>
       </div>
 
       <div id="emomInner">
@@ -332,6 +375,10 @@
           <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap">
             <button class="btn" id="emomRerollBtn" style="flex:1;">🎲 Re-roll</button>
             <button class="btn primary" id="emomStartBtn" style="flex:2; padding:14px; font-size:15px;">▶ Start EMOM</button>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+            <button class="btn ghost" id="emomReturnMainBtn" style="flex:1; font-size:12px;">← Return to Main Timer</button>
+            <a href="https://www.crawford-coaching.ca" target="_blank" rel="noopener" class="btn ghost" style="flex:1; font-size:12px; text-align:center; text-decoration:none;">Crawford Coaching Homepage →</a>
           </div>
           <button class="btn ghost" id="emomAskAssistantBtn" style="width:100%; margin-top:8px; font-size:12px; color:var(--muted);">
             🤖 Need help? Ask my assistant to explain an exercise
@@ -464,6 +511,13 @@
       <div class="time" id="time">00:00</div>
       <div class="sub" id="sub">—</div>
 
+    </section>
+
+    <!-- EMOM Actions (visible during/after EMOM workout) -->
+    <section id="emomActions" style="display:none; padding:10px 16px; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center;">
+      <button class="emom-nav-btn" id="emomActiveRerollBtn">🎲 Re-roll Workout</button>
+      <button class="emom-nav-btn" id="emomActiveReturnBtn">← Return to Main Timer</button>
+      <a href="https://www.crawford-coaching.ca" target="_blank" rel="noopener" class="emom-nav-btn" style="text-decoration:none;">Crawford Coaching Homepage →</a>
     </section>
 
     <!-- Bottom Controls -->
@@ -952,8 +1006,27 @@
 
     function pause() { running = false; pauseBtn.disabled = true; resumeBtn.disabled = false; statusEl.textContent = 'Paused'; cancelAnimationFrame(rafId); rafId = null; }
     function resume() { if (running) return; running = true; pauseBtn.disabled = false; resumeBtn.disabled = true; statusEl.textContent = 'Running…'; lastTs = null; rafId = requestAnimationFrame(loop); }
-  function reset() { running = false; cancelAnimationFrame(rafId); rafId = null; idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = []; startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true; updateUI(); statusEl.textContent = 'Reset'; summarize(); }
-  function finish() { running = false; cancelAnimationFrame(rafId); rafId = null; beep(220, 660); beep(220, 990); statusEl.textContent = 'Done!'; startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = false; phaseEl.innerHTML = 'Finished <span class="meta">—</span>'; timeEl.textContent = '00:00'; const countdownTime = (planState.length > 0 && planState[0].type === 'countdown') ? planState[0].seconds : 0; subEl.innerHTML = `<span class="remaining">TOTAL DURATION: ${fmtTotal(totalPlanSeconds - countdownTime)}</span>`; }
+  function reset() {
+    if (appMode === 'emom-active') { emomReset(); return; }
+    running = false; cancelAnimationFrame(rafId); rafId = null; idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = []; startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true; updateUI(); statusEl.textContent = 'Reset'; summarize();
+  }
+  function emomReset() {
+    running = false; cancelAnimationFrame(rafId); rafId = null;
+    idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = [];
+    startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true;
+    updateUI(); setBg('');
+    switchToEmomConfig();
+    statusEl.textContent = 'Reset — workout preserved';
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(rafId); rafId = null; beep(220, 660); beep(220, 990);
+    statusEl.textContent = 'Done!';
+    startBtn.disabled = (appMode === 'emom-active');
+    pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = false;
+    phaseEl.innerHTML = 'Finished <span class="meta">—</span>'; timeEl.textContent = '00:00';
+    const countdownTime = (planState.length > 0 && planState[0].type === 'countdown') ? planState[0].seconds : 0;
+    subEl.innerHTML = `<span class="remaining">TOTAL DURATION: ${fmtTotal(totalPlanSeconds - countdownTime)}</span>`;
+  }
 
     // ---------- Options Toggle ----------
     function toggleOptions() {
@@ -1216,25 +1289,70 @@
       });
     });
 
-    // EMOM panel show/hide
+    // ---------- App Mode State Machine ----------
+    let appMode = 'main'; // 'main' | 'emom-config' | 'emom-active'
     const emomPanel = document.getElementById('emomPanel');
-    const emomToggleBtn = document.getElementById('emomToggleBtn');
     const emomInner = document.getElementById('emomInner');
+    const modeSelector = document.getElementById('modeSelector');
+    const emomActionsBar = document.getElementById('emomActions');
+    const bottomControls = document.getElementById('bottomControls');
 
-    emomToggleBtn.addEventListener('click', () => {
-      const isHidden = emomInner.style.display === 'none';
-      emomInner.style.display = isHidden ? '' : 'none';
-      emomToggleBtn.textContent = isHidden ? 'Hide' : 'Show';
-    });
+    function switchToMain() {
+      appMode = 'main';
+      if (running) { running = false; cancelAnimationFrame(rafId); rafId = null; }
+      idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = [];
+      startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true;
+      updateUI(); setBg('');
+      modeSelector.style.display = '';
+      emomPanel.style.display = 'none';
+      controlsPanel.style.display = '';
+      toggleOptionsBtn.textContent = 'Hide Controls';
+      emomActionsBar.style.display = 'none';
+      bottomControls.style.display = 'flex';
+      statusEl.textContent = '';
+      summarize();
+    }
 
-    // Header Quick EMOM button
-    document.getElementById('headerEmomBtn').addEventListener('click', () => {
-      if (emomInner.style.display === 'none') {
-        emomInner.style.display = '';
-        emomToggleBtn.textContent = 'Hide';
-      }
-      emomPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    function switchToEmomConfig() {
+      appMode = 'emom-config';
+      modeSelector.style.display = 'none';
+      emomPanel.style.display = '';
+      emomInner.style.display = '';
+      controlsPanel.style.display = 'none';
+      emomActionsBar.style.display = 'none';
+      bottomControls.style.display = 'none';
+      if (currentEmomPlan) renderEmomPreview(currentEmomPlan);
+      statusEl.textContent = '';
+    }
+
+    function switchToEmomActive() {
+      appMode = 'emom-active';
+      modeSelector.style.display = 'none';
+      emomPanel.style.display = 'none';
+      controlsPanel.style.display = 'none';
+      emomActionsBar.style.display = 'flex';
+      bottomControls.style.display = 'flex';
+    }
+
+    // Mode selector buttons
+    document.getElementById('modeEmomWorkoutBtn').addEventListener('click', switchToEmomConfig);
+
+    // EMOM panel back button
+    document.getElementById('emomBackBtn').addEventListener('click', switchToMain);
+
+    // EMOM preview navigation
+    document.getElementById('emomReturnMainBtn').addEventListener('click', switchToMain);
+
+    // EMOM active bar buttons
+    document.getElementById('emomActiveRerollBtn').addEventListener('click', async () => {
+      running = false; cancelAnimationFrame(rafId); rafId = null;
+      idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = [];
+      startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true;
+      updateUI(); setBg('');
+      switchToEmomConfig();
+      await handleGenerate();
     });
+    document.getElementById('emomActiveReturnBtn').addEventListener('click', switchToMain);
 
     // EMOM helpers
     function getActiveVals(containerId) {
@@ -1539,10 +1657,8 @@
       resetBtn.disabled = false;
       statusEl.textContent = 'Running…';
 
-      // Auto-hide panels
-      if (controlsPanel.style.display !== 'none') toggleOptions();
-      emomInner.style.display = 'none';
-      emomToggleBtn.textContent = 'Show';
+      // Switch to EMOM active mode (hides config, shows timer + nav)
+      switchToEmomActive();
 
       // Scroll to timer display
       document.getElementById('display').scrollIntoView({ behavior: 'smooth', block: 'center' });

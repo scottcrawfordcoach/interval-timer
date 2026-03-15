@@ -309,10 +309,11 @@
             <div class="help">Generate a random EMOM workout in seconds</div>
           </div>
         </div>
-        <button class="btn" id="emomBackBtn">← Back</button>
+        <button class="btn" id="emomBackBtn" style="background:#1a2240; border-color:#3d4a6a;">← Back</button>
       </div>
 
       <div id="emomInner">
+        <div id="emomConfigOptions">
         <!-- TIME -->
         <div class="emom-group">
           <div class="emom-group-label">Time (minutes)</div>
@@ -367,18 +368,22 @@
         <button class="btn primary" id="emomGenerateBtn" style="width:100%; padding:14px; font-size:15px; margin-top:4px;">
           ⚡ Generate Workout
         </button>
+        </div><!-- end emomConfigOptions -->
 
         <!-- PREVIEW (hidden until generated) -->
         <div id="emomPreview" style="display:none">
           <div class="sep"></div>
           <div id="emomPreviewContent"></div>
           <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap">
-            <button class="btn" id="emomRerollBtn" style="flex:1;">🎲 Re-roll</button>
+            <button class="btn" id="emomRerollBtn" style="flex:1; background:#1a2240; border-color:#3d4a6a;">🎲 Re-roll</button>
             <button class="btn primary" id="emomStartBtn" style="flex:2; padding:14px; font-size:15px;">▶ Start EMOM</button>
           </div>
           <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
-            <button class="btn ghost" id="emomReturnMainBtn" style="flex:1; font-size:12px;">← Return to Main Timer</button>
-            <a href="https://www.crawford-coaching.ca" target="_blank" rel="noopener" class="btn ghost" style="flex:1; font-size:12px; text-align:center; text-decoration:none;">Crawford Coaching Homepage →</a>
+            <button class="btn" id="emomChangeOptionsBtn" style="flex:1; background:#1a2240; border-color:#3d4a6a; font-size:13px;">⚙ Change Options</button>
+            <button class="btn" id="emomReturnMainBtn" style="flex:1; background:#1a2240; border-color:#3d4a6a; font-size:13px;">← Return to Main Timer</button>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap">
+            <a href="https://www.crawford-coaching.ca" target="_blank" rel="noopener" class="btn" style="flex:1; background:#1a2240; border-color:#3d4a6a; font-size:13px; text-align:center; text-decoration:none;">Crawford Coaching Homepage →</a>
           </div>
           <button class="btn" id="emomAskAssistantBtn" style="width:100%; margin-top:8px; font-size:13px; background:#ffffff; color:#0b1020; border-color:transparent; font-weight:600;">
             🤖 Need help? Ask my assistant to explain an exercise
@@ -402,7 +407,7 @@
             <div class="help">Set your own exercises — 1 minute per exercise, every minute on the minute</div>
           </div>
         </div>
-        <button class="btn" id="emomTimerBackBtn">← Back</button>
+        <button class="btn" id="emomTimerBackBtn" style="background:#1a2240; border-color:#3d4a6a;">← Back</button>
       </div>
 
       <div class="grid cols-2" style="gap:14px; margin-top:8px;">
@@ -427,8 +432,8 @@
       <button class="btn primary" id="etStartBtn" style="width:100%; padding:14px; font-size:15px; margin-top:4px;">▶ Start EMOM Timer</button>
 
       <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
-        <button class="btn ghost" id="etReturnMainBtn" style="flex:1; font-size:12px;">← Return to Main Timer</button>
-        <a href="https://www.crawford-coaching.ca" target="_blank" rel="noopener" class="btn ghost" style="flex:1; font-size:12px; text-align:center; text-decoration:none;">Crawford Coaching Homepage →</a>
+        <button class="btn" id="etReturnMainBtn" style="flex:1; font-size:13px; background:#1a2240; border-color:#3d4a6a;">← Return to Main Timer</button>
+        <a href="https://www.crawford-coaching.ca" target="_blank" rel="noopener" class="btn" style="flex:1; font-size:13px; text-align:center; text-decoration:none; background:#1a2240; border-color:#3d4a6a;">Crawford Coaching Homepage →</a>
       </div>
     </section>
 
@@ -1050,8 +1055,16 @@
       if (controlsPanel.style.display !== 'none') toggleOptions();
     }
 
-    function pause() { running = false; pauseBtn.disabled = true; resumeBtn.disabled = false; statusEl.textContent = 'Paused'; cancelAnimationFrame(rafId); rafId = null; }
-    function resume() { if (running) return; running = true; pauseBtn.disabled = false; resumeBtn.disabled = true; statusEl.textContent = 'Running…'; lastTs = null; rafId = requestAnimationFrame(loop); }
+    function pause() {
+      running = false; pauseBtn.disabled = true; resumeBtn.disabled = false; statusEl.textContent = 'Paused'; cancelAnimationFrame(rafId); rafId = null;
+      if (appMode === 'emom-active') emomActionsBar.style.display = 'flex';
+      if (appMode === 'emom-timer-active') emomTimerActionsBar.style.display = 'flex';
+    }
+    function resume() {
+      if (running) return; running = true; pauseBtn.disabled = false; resumeBtn.disabled = true; statusEl.textContent = 'Running…'; lastTs = null; rafId = requestAnimationFrame(loop);
+      emomActionsBar.style.display = 'none';
+      emomTimerActionsBar.style.display = 'none';
+    }
   function reset() {
     if (appMode === 'emom-active') { emomReset(); return; }
     if (appMode === 'emom-timer-active') { emomTimerReset(); return; }
@@ -1082,6 +1095,9 @@
     phaseEl.innerHTML = 'Finished <span class="meta">—</span>'; timeEl.textContent = '00:00';
     const countdownTime = (planState.length > 0 && planState[0].type === 'countdown') ? planState[0].seconds : 0;
     subEl.innerHTML = `<span class="remaining">TOTAL DURATION: ${fmtTotal(totalPlanSeconds - countdownTime)}</span>`;
+    // Show nav buttons after workout finishes
+    if (appMode === 'emom-active') emomActionsBar.style.display = 'flex';
+    if (appMode === 'emom-timer-active') emomTimerActionsBar.style.display = 'flex';
   }
 
     // ---------- Options Toggle ----------
@@ -1385,14 +1401,19 @@
       hideAllPanels();
       emomPanel.style.display = '';
       emomInner.style.display = '';
-      if (currentEmomPlan) renderEmomPreview(currentEmomPlan);
+      const configOpts = document.getElementById('emomConfigOptions');
+      if (currentEmomPlan) {
+        renderEmomPreview(currentEmomPlan);
+        configOpts.style.display = 'none';
+      } else {
+        configOpts.style.display = '';
+      }
       statusEl.textContent = '';
     }
 
     function switchToEmomActive() {
       appMode = 'emom-active';
       hideAllPanels();
-      emomActionsBar.style.display = 'flex';
       bottomControls.style.display = 'flex';
     }
 
@@ -1407,7 +1428,6 @@
     function switchToEmomTimerActive() {
       appMode = 'emom-timer-active';
       hideAllPanels();
-      emomTimerActionsBar.style.display = 'flex';
       bottomControls.style.display = 'flex';
     }
 
@@ -1674,10 +1694,17 @@
 
       currentEmomPlan = plan;
       renderEmomPreview(plan);
+      // Hide config options, show only preview
+      document.getElementById('emomConfigOptions').style.display = 'none';
     }
 
     emomGenerateBtn.addEventListener('click', handleGenerate);
     emomRerollBtn.addEventListener('click', handleGenerate);
+
+    // Change Options button — show config chips again
+    document.getElementById('emomChangeOptionsBtn').addEventListener('click', () => {
+      document.getElementById('emomConfigOptions').style.display = '';
+    });
 
     // EMOM set colours — no red/rose tones (too close to rest colour)
     const EMOM_SET_COLORS = ['#3b82f6','#22c55e','#a855f7','#eab308','#06b6d4','#f97316'];

@@ -269,12 +269,13 @@
 
   <header style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
     <h1><span style="opacity:.5; font-weight:400">Crawford Coaching</span> Interval Timer</h1>
-    <div class="row" style="gap:6px">
+    <div class="row" style="gap:6px; display:none;" id="headerToolbar">
       <select id="quickFavSelect" style="max-width:160px; display:none">
         <option value="">Load Saved…</option>
       </select>
       <button class="btn ghost" id="headerSaveFavBtn" title="Save current setup to favourites">★ Save</button>
       <button class="btn" id="toggleOptionsBtn" style="background:#1a2240; border-color:#3d4a6a;">Hide Controls</button>
+      <button class="btn" id="mainMenuBtn" style="background:#1a2240; border-color:#3d4a6a;">← Main Menu</button>
     </div>
   </header>
 
@@ -295,6 +296,16 @@
           <span class="mode-icon">⚡</span>
           <span>Quick EMOM Workout</span>
           <span class="mode-sub">Generate a random EMOM in seconds</span>
+        </button>
+        <button class="mode-btn" id="modeCustomTimerBtn">
+          <span class="mode-icon">🛠️</span>
+          <span>Build a Custom Timer</span>
+          <span class="mode-sub">Full control over sets, intervals &amp; colours</span>
+        </button>
+        <button class="mode-btn" id="modeSavedBtn">
+          <span class="mode-icon">💾</span>
+          <span>My Saved Workouts</span>
+          <span class="mode-sub">Load a previously saved workout</span>
         </button>
       </div>
     </section>
@@ -437,8 +448,23 @@
       </div>
     </section>
 
+    <!-- Saved Workouts -->
+    <section class="card stack" id="savedWorkoutsPanel" style="display:none">
+      <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+        <div style="display:flex; align-items:center; gap:10px">
+          <span style="font-size:20px">💾</span>
+          <div>
+            <div style="font-weight:700; font-size:15px;">My Saved Workouts</div>
+            <div class="help">Load a previously saved workout</div>
+          </div>
+        </div>
+        <button class="btn" id="savedBackBtn" style="background:#1a2240; border-color:#3d4a6a;">← Main Menu</button>
+      </div>
+      <div id="savedWorkoutsList" class="stack" style="margin-top:8px;"></div>
+    </section>
+
     <!-- Controls -->
-    <section class="card stack" id="controls">
+    <section class="card stack" id="controls" style="display:none">
       <div class="row" style="flex-wrap:wrap">
         <label style="flex:1 1 220px">
           Workout name
@@ -572,7 +598,7 @@
     </section>
 
     <!-- Bottom Controls -->
-    <section class="card" id="bottomControls" style="margin-top:auto; padding:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; position:sticky; bottom:0; z-index:10; border-bottom-left-radius:0; border-bottom-right-radius:0; border-left:0; border-right:0; border-bottom:0;">
+    <section class="card" id="bottomControls" style="margin-top:auto; padding:16px; display:none; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; position:sticky; bottom:0; z-index:10; border-bottom-left-radius:0; border-bottom-right-radius:0; border-left:0; border-right:0; border-bottom:0;">
       <button class="btn" id="startBtn" style="min-width:80px; font-size:16px; padding:12px 24px; background:#22c55e; color:#0b1020; border-color:transparent;">Start</button>
       <button class="btn" id="pauseBtn" disabled style="min-width:80px; font-size:16px; padding:12px 24px; background:#ef4444; color:white; border-color:transparent;">Pause</button>
       <button class="btn" id="resumeBtn" disabled style="min-width:80px; font-size:16px; padding:12px 24px; background:#3b82f6; color:white; border-color:transparent;">Resume</button>
@@ -808,6 +834,8 @@
     const headerSaveFavBtn = $('#headerSaveFavBtn');
     const quickFavSelect = $('#quickFavSelect');
     const controlsPanel = $('#controls');
+    const savedWorkoutsPanel = $('#savedWorkoutsPanel');
+    const headerToolbar = $('#headerToolbar');
     const statusEl = $('#status');
     const summaryEl = $('#summary');
   const saveFavBtn = $('#saveFavBtn');
@@ -1068,7 +1096,11 @@
   function reset() {
     if (appMode === 'emom-active') { emomReset(); return; }
     if (appMode === 'emom-timer-active') { emomTimerReset(); return; }
-    running = false; cancelAnimationFrame(rafId); rafId = null; idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = []; startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true; updateUI(); statusEl.textContent = 'Reset'; summarize();
+    running = false; cancelAnimationFrame(rafId); rafId = null; idx = 0; remaining = 0; planState = []; totalPlanSeconds = 0; cumDurations = []; startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; resetBtn.disabled = true; updateUI(); setBg(''); statusEl.textContent = 'Reset'; summarize();
+    if (appMode === 'custom-timer') {
+      controlsPanel.style.display = '';
+      toggleOptionsBtn.textContent = 'Hide Controls';
+    }
   }
   function emomReset() {
     running = false; cancelAnimationFrame(rafId); rafId = null;
@@ -1362,7 +1394,7 @@
     });
 
     // ---------- App Mode State Machine ----------
-    let appMode = 'main'; // 'main' | 'emom-config' | 'emom-active' | 'emom-timer-config' | 'emom-timer-active'
+    let appMode = 'main'; // 'main' | 'custom-timer' | 'saved-workouts' | 'emom-config' | 'emom-active' | 'emom-timer-config' | 'emom-timer-active'
     const emomPanel = document.getElementById('emomPanel');
     const emomInner = document.getElementById('emomInner');
     const emomTimerPanel = document.getElementById('emomTimerPanel');
@@ -1376,9 +1408,11 @@
       emomPanel.style.display = 'none';
       emomTimerPanel.style.display = 'none';
       controlsPanel.style.display = 'none';
+      savedWorkoutsPanel.style.display = 'none';
       emomActionsBar.style.display = 'none';
       emomTimerActionsBar.style.display = 'none';
       bottomControls.style.display = 'none';
+      headerToolbar.style.display = 'none';
     }
 
     function switchToMain() {
@@ -1389,11 +1423,64 @@
       updateUI(); setBg('');
       hideAllPanels();
       modeSelector.style.display = '';
+      statusEl.textContent = '';
+    }
+
+    function switchToCustomTimer() {
+      appMode = 'custom-timer';
+      hideAllPanels();
       controlsPanel.style.display = '';
+      headerToolbar.style.display = '';
       toggleOptionsBtn.textContent = 'Hide Controls';
       bottomControls.style.display = 'flex';
       statusEl.textContent = '';
       summarize();
+    }
+
+    function switchToSavedWorkouts() {
+      appMode = 'saved-workouts';
+      hideAllPanels();
+      savedWorkoutsPanel.style.display = '';
+      renderSavedWorkoutsList();
+    }
+
+    function renderSavedWorkoutsList() {
+      const container = document.getElementById('savedWorkoutsList');
+      let list = [];
+      try { list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); if (!Array.isArray(list)) list = []; } catch(e) { list = []; }
+      container.innerHTML = '';
+      if (!list.length) {
+        container.innerHTML = '<div style="text-align:center; padding:24px; color:var(--muted); font-size:14px;">No saved workouts at this time.</div>';
+        return;
+      }
+      list.sort((a,b) => a.name.localeCompare(b.name));
+      list.forEach(fav => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.style.cssText = 'gap:8px; padding:10px 12px; background:rgba(255,255,255,.04); border-radius:8px;';
+        const nameSpan = document.createElement('div');
+        nameSpan.textContent = fav.name;
+        nameSpan.style.cssText = 'flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;';
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'btn';
+        loadBtn.style.cssText = 'padding:6px 14px; background:#22c55e; color:#0b1020; border-color:transparent; font-weight:600;';
+        loadBtn.textContent = 'Load';
+        loadBtn.addEventListener('click', () => { applyConfig(fav); switchToCustomTimer(); });
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn danger';
+        delBtn.style.cssText = 'padding:6px 10px;';
+        delBtn.textContent = '✕';
+        delBtn.title = 'Delete';
+        delBtn.addEventListener('click', () => {
+          if (confirm('Delete "' + fav.name + '"?')) {
+            const cur = JSON.parse(localStorage.getItem(FAV_KEY) || '[]').filter(x => x.name !== fav.name);
+            saveFavorites(cur);
+            renderSavedWorkoutsList();
+          }
+        });
+        row.appendChild(nameSpan); row.appendChild(loadBtn); row.appendChild(delBtn);
+        container.appendChild(row);
+      });
     }
 
     function switchToEmomConfig() {
@@ -1434,6 +1521,10 @@
     // Mode selector buttons
     document.getElementById('modeEmomWorkoutBtn').addEventListener('click', switchToEmomConfig);
     document.getElementById('modeEmomTimerBtn').addEventListener('click', switchToEmomTimerConfig);
+    document.getElementById('modeCustomTimerBtn').addEventListener('click', switchToCustomTimer);
+    document.getElementById('modeSavedBtn').addEventListener('click', switchToSavedWorkouts);
+    document.getElementById('mainMenuBtn').addEventListener('click', switchToMain);
+    document.getElementById('savedBackBtn').addEventListener('click', switchToMain);
 
     // EMOM Workout panel back button
     document.getElementById('emomBackBtn').addEventListener('click', switchToMain);

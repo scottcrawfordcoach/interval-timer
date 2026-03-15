@@ -14,7 +14,7 @@
     :root {
       --bg: #0b1020;
       --fg: #e7ecf3;
-      --muted: #b9c2cc;
+      --muted: #d0d7e0;
       --accent: #66a3ff;
       --danger: #ff6b6b;
       --card: #151b2f;
@@ -65,15 +65,15 @@
     .btn:active { transform: translateY(1px); }
     .btn.primary { background: var(--accent); color: #0b1020; border-color: transparent; }
     .btn.primary:hover { filter: brightness(1.05); }
-    .btn.ghost { background: transparent; }
+    .btn.ghost { background: transparent; color: #d0d7e0; }
     .btn.danger { background: var(--danger); border-color: transparent; color: white; }
 
     .timer { position: relative; display: grid; place-items: center; height: 100%; min-height: 240px; text-align: center; background: radial-gradient(1200px 800px at 50% -10%, rgba(255,255,255,.06), transparent); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
-    .timer .label { color: var(--muted); font-size: calc(var(--timer-size) * 0.3); letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.05; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+    .timer .label { color: #dce2ea; font-size: calc(var(--timer-size) * 0.3); letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.05; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
     .timer .label .meta { display:block; margin-top: 6px; }
     .timer .time { font-size: var(--timer-size); font-weight: 900; line-height: 1; margin: 16px 0; font-variant-numeric: tabular-nums; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
     /* Bottom info same size as top label */
-    .timer .sub { color: var(--muted); font-size: calc(var(--timer-size) * 0.3); text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+    .timer .sub { color: #dce2ea; font-size: calc(var(--timer-size) * 0.3); text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 
   body:not(.colour-by-interval) #intervalMeta select[data-interval-color] { display:none; }
   body:not(.colour-by-interval) #intervalMeta .help-interval-note { display:none; }
@@ -103,7 +103,7 @@
     .emom-chip {
       background:#10172b;
       border:1px solid var(--border);
-      color:var(--muted);
+      color:#cdd4de;
       padding:8px 14px;
       border-radius:10px;
       font-size:13px;
@@ -175,15 +175,15 @@
     .mode-btn.coming-soon { opacity:0.5; cursor:default; }
     .mode-btn.coming-soon:hover { border-color:var(--border); background:var(--card); transform:none; }
     .mode-btn .mode-icon { font-size:36px; }
-    .mode-btn .mode-sub { font-size:12px; color:var(--muted); font-weight:400; }
+    .mode-btn .mode-sub { font-size:12px; color:#c0c8d4; font-weight:400; }
 
     /* EMOM nav buttons */
     .emom-nav-btn {
       padding:10px 18px; border-radius:10px; font-size:13px; font-weight:600;
-      cursor:pointer; border:1px solid var(--border); background:var(--card); color:var(--fg);
+      cursor:pointer; border:1px solid #3d4a6a; background:#1a2240; color:#e7ecf3;
       transition:background .12s, border-color .12s; white-space:nowrap;
     }
-    .emom-nav-btn:hover { border-color:var(--accent); background:#16213a; }
+    .emom-nav-btn:hover { border-color:var(--accent); background:#1f2b4a; }
 
     /* Swatch palette */
     .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
@@ -692,7 +692,7 @@
       document.body.style.background = bg;
       const lum = luminance(bg);
       document.documentElement.style.setProperty('--fg', lum > 0.35 ? '#000000' : '#e7ecf3');
-      document.documentElement.style.setProperty('--muted', lum > 0.35 ? '#4b5563' : '#b9c2cc');
+      document.documentElement.style.setProperty('--muted', lum > 0.35 ? '#4b5563' : '#d0d7e0');
     }
 
     // ---------- Audio (beep) ----------

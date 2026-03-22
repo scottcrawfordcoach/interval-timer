@@ -1582,6 +1582,24 @@
       return a;
     }
 
+      function buildUniqueExercisePool(pool) {
+        const uniquePool = [];
+        const seenNames = new Set();
+        for (const exercise of shuffle(pool)) {
+          if (seenNames.has(exercise.n)) continue;
+          seenNames.add(exercise.n);
+          uniquePool.push(exercise);
+        }
+        return uniquePool;
+      }
+
+      function getBodyPartPreference(pool, preferredBodyParts) {
+        const availableBodyParts = [...new Set(pool.map(ex => ex.b))];
+        const preferred = preferredBodyParts.filter(part => availableBodyParts.includes(part));
+        const remaining = availableBodyParts.filter(part => !preferred.includes(part));
+        return preferred.concat(remaining);
+      }
+
     // Body-part diversity selection (round-robin)
     function selectDiverse(pool, count, bodyParts) {
       const shuffled = shuffle(pool);
@@ -1630,17 +1648,17 @@
       // "Full Body" selected = all body parts welcome
       const bodyAll = bodySel.includes('Full Body');
 
-      // Filter exercises by equipment (primary + secondary), difficulty, and body part
-      const pool = EMOM_DB.filter(ex => {
+      // Equipment and difficulty are hard constraints. Focus is a preference if needed to fill the workout.
+      const filteredPool = EMOM_DB.filter(ex => {
         if (!equipSel.includes(ex.e)) return false;
         if (ex.s && !equipSel.includes(ex.s)) return false;
         if (!diffSel.includes(ex.d)) return false;
-        if (!bodyAll && !bodySel.includes(ex.b)) return false;
         return true;
       });
+      const pool = buildUniqueExercisePool(filteredPool);
 
       if (pool.length < 4) {
-        showEmomNoMatch(`Only ${pool.length} exercise(s) match — need at least 4. Broaden your selections.`);
+        showEmomNoMatch(`Only ${pool.length} unique exercise(s) match this equipment and difficulty combination — need at least 4. Broaden your selections.`);
         return null;
       }
 
@@ -1648,7 +1666,7 @@
       // 4-6 exercises, 3-6 sets, 60-90s rest. Maximise work volume, stay <= target.
       const totalSec = totalMin * 60;
       const combos = [];
-      for (let ex = 6; ex >= 4; ex--) {
+      for (let ex = Math.min(6, pool.length); ex >= 4; ex--) {
         for (let sets = 6; sets >= 3; sets--) {
           const workSec = ex * sets * 60;
           const breaks = sets - 1;
@@ -1671,22 +1689,28 @@
       }
 
       const chosen = combos[0];
-      const numEx = Math.min(chosen.exercises, pool.length);
-      // When Full Body is selected, round-robin across ALL body regions for a good spread
-      const diversityParts = bodyAll ? ['Upper', 'Lower', 'Core', 'Full Body'] : bodySel;
-      const selected = selectDiverse(pool, numEx, diversityParts);
-      // Recalculate actual total with possibly fewer exercises
-      const actualWorkSec = numEx * chosen.sets * 60;
+      const strictFocusPool = bodyAll ? pool : pool.filter(ex => bodySel.includes(ex.b));
+      const selectionPool = strictFocusPool.length >= chosen.exercises ? strictFocusPool : pool;
+      const diversityParts = bodyAll
+        ? ['Upper', 'Lower', 'Core', 'Full Body']
+        : getBodyPartPreference(selectionPool, bodySel);
+      const selected = selectDiverse(selectionPool, chosen.exercises, diversityParts);
+      const actualNumEx = selected.length;
+      const actualWorkSec = actualNumEx * chosen.sets * 60;
       const actualRestSec = chosen.restSeconds * (chosen.sets - 1);
       const actualTotalSec = actualWorkSec + actualRestSec;
+      const focusExpanded = !bodyAll && selected.some(ex => !bodySel.includes(ex.b));
 
       return {
         exercises: selected,
         sets: chosen.sets,
-        numExercises: numEx,
+        numExercises: actualNumEx,
         restSeconds: chosen.restSeconds,
         totalMinutes: totalMin,
-        actualTotalSec: actualTotalSec
+        actualTotalSec: actualTotalSec,
+        focusExpanded,
+        focusAllBodyParts: bodyAll,
+        requestedFocus: bodySel.slice()
       };
     }
 
@@ -1794,6 +1818,20 @@
       html += `<div class="help" style="margin-top:8px; text-align:center;">
         Each exercise = 1 minute (do the reps, rest for the remainder)
       </div>`;
+
+      if (plan.focusAllBodyParts) {
+        html += `<div class="help" style="margin-top:8px; text-align:center;">
+          Focus mode: Full Body (all body regions eligible).
+        </div>`;
+      } else if (plan.focusExpanded && plan.requestedFocus && plan.requestedFocus.length) {
+        html += `<div class="help" style="margin-top:8px; text-align:center;">
+          Focus mode: Broadened beyond ${plan.requestedFocus.join(', ')} to fill all intervals.
+        </div>`;
+      } else if (plan.requestedFocus && plan.requestedFocus.length) {
+        html += `<div class="help" style="margin-top:8px; text-align:center;">
+          Focus mode: Strict (${plan.requestedFocus.join(', ')}).
+        </div>`;
+      }
 
       emomPreviewContent.innerHTML = html;
     }

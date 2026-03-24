@@ -3,14 +3,15 @@
  * © 2026 Scott Crawford – Crawford Coaching
  * https://crawfordcoaching.ca
  */
-const CACHE_NAME = 'interval-timer-v9';
+const CACHE_NAME = 'interval-timer-v10';
 const ASSETS = [
   './timer.html',
   './EMOM_DB.js',
   './manifest.json',
+  './coaching-1-002.png',
   './favicon.png',
-  './icon192.png',
-  './icon512.png'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Install: pre-cache core assets

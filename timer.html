@@ -723,6 +723,24 @@
           </div>
         </div>
 
+        <!-- EXERCISE ORDER -->
+        <div class="emom-group">
+          <div class="emom-group-label">Exercise Order</div>
+          <div class="emom-chips" id="emomOrder">
+            <button class="emom-chip active" data-val="circuit">Run through each, then repeat</button>
+            <button class="emom-chip" data-val="blocks">All sets of one exercise before moving on</button>
+          </div>
+        </div>
+
+        <!-- REPS INTENSITY -->
+        <div class="emom-group">
+          <div class="emom-group-label">Reps per Interval</div>
+          <div class="emom-chips" id="emomReps">
+            <button class="emom-chip active" data-val="standard">10 reps / 5 per side</button>
+            <button class="emom-chip" data-val="intense">15 reps / 8 per side</button>
+          </div>
+        </div>
+
         <!-- GENERATE BUTTON -->
         <button class="btn primary" id="emomGenerateBtn" style="width:100%; padding:14px; font-size:15px; margin-top:4px;">
           ⚡ Generate Workout
@@ -1988,6 +2006,8 @@
       const equipSel = getActiveVals('emomEquip');
       const diffSel = getActiveVals('emomDiff');
       const bodySel = getActiveVals('emomFocus');
+      const orderMode = getActiveVals('emomOrder')[0] || 'circuit';
+      const repsMode = getActiveVals('emomReps')[0] || 'standard';
 
       if (!equipSel.length || !diffSel.length || !bodySel.length) {
         showEmomNoMatch('Select at least one option in each category.');
@@ -2059,7 +2079,9 @@
         actualTotalSec: actualTotalSec,
         focusExpanded,
         focusAllBodyParts: bodyAll,
-        requestedFocus: bodySel.slice()
+        requestedFocus: bodySel.slice(),
+        orderMode,
+        repsMode
       };
     }
 
@@ -2133,6 +2155,13 @@
       return `${m}:${String(s).padStart(2, '0')}`;
     }
 
+    function mapReps(dbReps, repsMode) {
+      if (repsMode === 'standard') return dbReps;
+      // intense: 10 → 15, 5 per side → 8 per side
+      if (/per side/i.test(dbReps)) return '8 per side';
+      return '15';
+    }
+
     function renderEmomPreview(plan) {
       emomNoMatch.style.display = 'none';
       emomPreview.style.display = '';
@@ -2143,15 +2172,19 @@
         ? ` <span style="font-size:12px; color:var(--muted);">(${actualMin} of ${plan.totalMinutes}:00)</span>`
         : '';
 
+      const orderLabel = plan.orderMode === 'blocks' ? ' • Block order' : ' • Circuit order';
+      const repsLabel = plan.repsMode === 'intense' ? ' • Intense reps' : '';
+
       let html = `
         <div class="emom-preview-header">
           <strong>EMOM ${actualMin}${timeNote}</strong>
-          <span>${plan.numExercises} exercises × ${plan.sets} sets • ${restLabel} rest between sets</span>
+          <span>${plan.numExercises} exercises × ${plan.sets} sets • ${restLabel} rest${orderLabel}${repsLabel}</span>
         </div>
       `;
 
       plan.exercises.forEach((ex, i) => {
         const color = PALETTE[i % PALETTE.length];
+        const reps = mapReps(ex.r, plan.repsMode);
         html += `
           <div class="emom-exercise-row">
             <div class="emom-exercise-num" style="background:${color}">${i + 1}</div>
@@ -2159,7 +2192,7 @@
               <div class="emom-exercise-name">${ex.n}</div>
               <div class="emom-exercise-meta">${ex.e}${ex.s ? ' + ' + ex.s : ''} • ${ex.b} • ${ex.d}</div>
             </div>
-            <div class="emom-exercise-reps">${ex.r}</div>
+            <div class="emom-exercise-reps">${reps}</div>
           </div>
         `;
       });
@@ -2218,29 +2251,59 @@
       const plan = currentEmomPlan;
       const timerPlan = [];
 
-      for (let s = 0; s < plan.sets; s++) {
-        const setColor = EMOM_SET_COLORS[s % EMOM_SET_COLORS.length];
+      if (plan.orderMode === 'blocks') {
+        // All sets of exercise 1, rest, all sets of exercise 2, rest, ...
         for (let i = 0; i < plan.exercises.length; i++) {
           const ex = plan.exercises[i];
-          timerPlan.push({
-            type: 'work',
-            set: s + 1,
-            interval: i + 1,
-            seconds: 60,
-            color: setColor,
-            setName: `Set ${s + 1} of ${plan.sets}`,
-            intervalName: `${ex.n} — ${ex.r}`
-          });
+          const exColor = PALETTE[i % PALETTE.length];
+          const reps = mapReps(ex.r, plan.repsMode);
+          for (let s = 0; s < plan.sets; s++) {
+            timerPlan.push({
+              type: 'work',
+              set: s + 1,
+              interval: i + 1,
+              seconds: 60,
+              color: exColor,
+              setName: `${ex.n} — Set ${s + 1} of ${plan.sets}`,
+              intervalName: `${ex.n} — ${reps}`
+            });
+          }
+          if (i < plan.exercises.length - 1) {
+            timerPlan.push({
+              type: 'break',
+              set: 1,
+              interval: i + 1,
+              seconds: plan.restSeconds,
+              color: '#ef4444'
+            });
+          }
         }
-        // Flexible rest between sets (not after the last set)
-        if (s < plan.sets - 1) {
-          timerPlan.push({
-            type: 'break',
-            set: s + 1,
-            interval: plan.exercises.length,
-            seconds: plan.restSeconds,
-            color: '#ef4444'
-          });
+      } else {
+        // Circuit: run through each exercise then repeat
+        for (let s = 0; s < plan.sets; s++) {
+          for (let i = 0; i < plan.exercises.length; i++) {
+            const ex = plan.exercises[i];
+            const exColor = PALETTE[i % PALETTE.length];
+            const reps = mapReps(ex.r, plan.repsMode);
+            timerPlan.push({
+              type: 'work',
+              set: s + 1,
+              interval: i + 1,
+              seconds: 60,
+              color: exColor,
+              setName: `Set ${s + 1} of ${plan.sets}`,
+              intervalName: `${ex.n} — ${reps}`
+            });
+          }
+          if (s < plan.sets - 1) {
+            timerPlan.push({
+              type: 'break',
+              set: s + 1,
+              interval: plan.exercises.length,
+              seconds: plan.restSeconds,
+              color: '#ef4444'
+            });
+          }
         }
       }
 
